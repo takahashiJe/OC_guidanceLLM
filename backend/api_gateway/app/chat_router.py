@@ -1,50 +1,30 @@
-# backend/api_gateway/app/chat_router.py
-
-import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from uuid import UUID, uuid4
 
-# 依存関係、モデル、スキーマ、Celeryアプリケーションをインポート
-from .dependencies import get_current_active_user
-from worker.app.db.models import User
-from shared.schemas import ChatInput, ChatResponse
-from shared.celery_app import celery_app # Celeryインスタンス
+from app.dependencies import get_db_session, get_current_user
+from app.schemas.chat import ChatInput, ChatResponse
+from app.schemas.user import User
+from app.celery_app import celery_app
+# kombuライブラリから、より具体的な接続エラーをインポートします
+from kombu.exceptions import OperationalError
 
-# ルーターのインスタンスを作成
-router = APIRouter(
-    prefix="/chat",
-    tags=["Chat"],
-    # このルーターのすべてのエンドポイントは、認証を必須とする
-    dependencies=[Depends(get_current_active_user)],
-)
+router = APIRouter()
 
-@router.post("/", response_model=ChatResponse, status_code=status.HTTP_202_ACCEPTED)
+
+@router.post("", response_model=ChatResponse)
 def post_chat_message(
     chat_input: ChatInput,
-    current_user: User = Depends(get_current_active_user),
-):
+    db: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user),
+) -> ChatResponse:
     """
-    認証済みユーザーからのチャットメッセージを受け付け、
-    バックエンドの対話処理タスクを非同期で実行する。
-
-    Args:
-        chat_input: ユーザーからのメッセージとセッションID。
-        current_user: 認証トークンから特定された現在のユーザー情報。
-
-    Returns:
-        非同期処理のタスクIDと現在のセッションIDを含むレスポンス。
+    ユーザーからのチャットメッセージを受け取り、非同期タスクとして処理を開始するエンドポイント。
     """
-    if not chat_input.message:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="メッセージが空です。",
-        )
-
-    # セッションIDがクライアントから提供されない場合は、新しいIDを生成
-    session_id = chat_input.session_id or str(uuid.uuid4())
+    session_id = chat_input.session_id or str(uuid4())
 
     try:
         # Celeryタスクを呼び出す
-        # 'worker.app.tasks.run_chat_graph' はCelery Worker側で定義するタスク名
         task = celery_app.send_task(
             'worker.app.tasks.run_chat_graph',
             args=[
@@ -54,13 +34,20 @@ def post_chat_message(
             ]
         )
         
-        # クライアントにタスクIDを返す
         return ChatResponse(task_id=task.id, session_id=session_id)
 
-    except Exception as e:
-        # Celeryブローカー（Redisなど）に接続できない場合のエラーハンドリング
+    # ★修正点 1: OperationalErrorを明示的に捕捉
+    # これにより、Redis等のメッセージブローカーに接続できない問題を検知します。
+    except OperationalError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"非同期サービスの呼び出しに失敗しました: {e}",
+            detail=f"メッセージブローカーへの接続に失敗しました。サービスが一時的に利用できない可能性があります。",
         )
-
+    
+    # ★修正点 2: 予期せぬエラーのための汎用的な例外ハンドリング
+    # OperationalError以外の問題が発生した場合にも、サーバーエラーとして処理します。
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"非同期サービスの呼び出し中に予期せぬエラーが発生しました: {e}",
+        )

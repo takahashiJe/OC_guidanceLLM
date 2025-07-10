@@ -1,99 +1,126 @@
 # backend/worker/app/services/memory_service.py
 
+import logging
 from typing import List
+import numpy as np
+from sklearn.cluster import AgglomerativeClustering
 from sqlalchemy.orm import Session
-from langchain_community.vectorstores import Chroma
-from langchain_core.documents import Document
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_community.embeddings import OllamaEmbeddings # OllamaEmbeddings をインポート
 
-from backend.worker.app.db.models import ConversationHistory
+from app.models import ChatMessage
+from app.services.db_service import get_messages_by_session_id
+
+# ロギング設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class MemoryService:
-    """
-    会話の短期記憶（MySQL）と長期記憶（ChromaDB）を管理するサービスクラス。
-    """
-    def __init__(self, db_session: Session, vectorstore_memory: Chroma):
-        self.db = db_session
-        self.vectorstore_memory = vectorstore_memory
-
-    def get_history(
-        self,
-        user_id: int,
-        session_id: str,
-        latest_input: str,
-        short_term_k: int = 5,
-        long_term_k: int = 3,
-    ) -> List[BaseMessage]:
-        """
-        指定されたユーザーの会話履歴を取得する。
-        """
-        # 1. 短期記憶の取得 (現在のセッションの直近の文脈)
-        short_term_results = (
-            self.db.query(ConversationHistory)
-            .filter(ConversationHistory.session_id == session_id)
-            .order_by(ConversationHistory.turn.desc())
-            .limit(short_term_k)
-            .all()
+    def __init__(self, session: Session, session_id: str, llm_service):
+        self.session = session
+        self.session_id = session_id
+        self.llm_service = llm_service
+        # OllamaEmbeddings を初期化
+        # 事前に `ollama pull nomic-embed-text` を実行しておく必要があります
+        # Ollamaサービスがローカルで実行されていることを前提とします
+        self.embedder = OllamaEmbeddings(
+            model="nomic-embed-text",
+            # base_url="http://host.docker.internal:11434" # DockerコンテナからホストのOllamaに接続する場合など
         )
-        short_term_results.reverse()
-        
-        short_term_memory: List[BaseMessage] = []
-        for res in short_term_results:
-            short_term_memory.append(HumanMessage(content=res.human_message))
-            short_term_memory.append(AIMessage(content=res.ai_message))
 
-        # 2. 長期記憶の取得 (過去のセッションを含む、関連性の高い会話)
-        long_term_docs = self.vectorstore_memory.similarity_search(
-            query=latest_input,
-            k=long_term_k,
-            filter={"user_id": user_id}
-        )
-        
-        long_term_memory: List[BaseMessage] = []
-        for doc in long_term_docs:
-            parts = doc.page_content.split("\nAI: ")
-            if len(parts) == 2:
-                human_part = parts[0].replace("Human: ", "")
-                ai_part = parts[1]
-                long_term_memory.append(HumanMessage(content=human_part))
-                long_term_memory.append(AIMessage(content=ai_part))
+    def get_history(self) -> List[BaseMessage]:
+        """
+        短期記憶（DB）と長期記憶から会話履歴を取得し、
+        意味的に重複する内容を排除して統合した履歴を返す。
+        """
+        # 1. 短期記憶の取得 (直近の会話履歴)
+        short_term_memory = self._get_short_term_memory()
+        logger.info(f"短期記憶から {len(short_term_memory)} 件のメッセージを取得しました。")
 
-        # 3. 履歴の統合
+        # 2. 長期記憶の取得（この実装ではダミー）
+        long_term_memory = self._get_long_term_memory()
+        logger.info(f"長期記憶から {len(long_term_memory)} 件のメッセージを取得しました。")
+        
+        # 3. 履歴の統合と意味的な重複排除
         combined_history = long_term_memory + short_term_memory
-        final_history = []
-        seen = set()
-        for msg in reversed(combined_history):
-            msg_tuple = (type(msg).__name__, msg.content)
-            if msg_tuple not in seen:
-                final_history.append(msg)
-                seen.add(msg_tuple)
-        final_history.reverse()
+        if not combined_history:
+            return []
+
+        logger.info(f"統合前の履歴は {len(combined_history)} 件です。意味的な重複排除を開始します。")
+        final_history = self._semantic_deduplication(combined_history)
+        logger.info(f"重複排除後の最終的な履歴は {len(final_history)} 件です。")
+
         return final_history
 
-    def save_history(
-        self,
-        user_id: int,
-        session_id: str,
-        turn: int,
-        human_message: str,
-        ai_message: str,
-    ):
-        """
-        新しい会話をMySQLとChromaDBの両方に保存する。
-        """
-        new_history_record = ConversationHistory(
-            user_id=user_id,
-            session_id=session_id,
-            turn=turn,
-            human_message=human_message,
-            ai_message=ai_message,
-        )
-        self.db.add(new_history_record)
-        self.db.commit()
+    def _get_short_term_memory(self) -> List[BaseMessage]:
+        """DBから直近の会話履歴を取得する"""
+        messages = get_messages_by_session_id(self.session, self.session_id)
+        history: List[BaseMessage] = []
+        for msg in messages:
+            if msg.sender == "human":
+                history.append(HumanMessage(content=msg.message))
+            elif msg.sender == "ai":
+                history.append(AIMessage(content=msg.message))
+        return history
+    
+    def _get_long_term_memory(self) -> List[BaseMessage]:
+        """ベクトルストアなどから長期記憶を取得する（この実装ではダミー）"""
+        return []
 
-        doc_content = f"Human: {human_message}\nAI: {ai_message}"
-        doc = Document(
-            page_content=doc_content,
-            metadata={"user_id": user_id, "session_id": session_id, "turn": turn}
+    def _semantic_deduplication(self, messages: List[BaseMessage]) -> List[BaseMessage]:
+        """
+        OllamaEmbeddingsを使用してメッセージの意味的な重複を排除する。
+        類似したメッセージをクラスタリングし、各クラスタから1つの代表メッセージを選ぶ。
+        """
+        if len(messages) < 2:
+            return messages
+
+        contents = [msg.content for msg in messages]
+        
+        # LangChainのOllamaEmbeddingsを使ってドキュメントをエンコーディング
+        logger.info(f"{len(contents)}件のメッセージのエンべディングをOllamaにリクエストします...")
+        embeddings_list = self.embedder.embed_documents(contents)
+        embeddings = np.array(embeddings_list)
+        logger.info("エンべディングが完了しました。")
+
+        # 凝集型クラスタリングを実行
+        # distance_threshold: 類似度の閾値。値が小さいほど「似ている」と判定する基準が厳しくなる
+        # (コサイン距離 = 1 - コサイン類似度)
+        # 例えば、類似度0.9以上を同一クラスタとしたい場合、距離の閾値は 1 - 0.9 = 0.1 となる
+        clustering = AgglomerativeClustering(
+            n_clusters=None, 
+            distance_threshold=0.2, # コサイン類似度0.8以上を同一クラスタとみなす
+            metric='cosine', 
+            linkage='average'
+        ).fit(embeddings)
+        
+        clusters = {}
+        for i, label in enumerate(clustering.labels_):
+            if label not in clusters:
+                clusters[label] = []
+            clusters[label].append(i)
+
+        # 各クラスタから代表メッセージを選択
+        deduplicated_indices = []
+        for label, indices in clusters.items():
+            # クラスタ内で最新（リストの後方）のメッセージを代表として選択
+            representative_index = max(indices)
+            deduplicated_indices.append(representative_index)
+        
+        # 元の順序を保つためにインデックスをソート
+        deduplicated_indices.sort()
+        
+        final_messages = [messages[i] for i in deduplicated_indices]
+        return final_messages
+
+    def save_message(self, human_message: str, ai_message: str):
+        """会話のやりとりをDBに保存する"""
+        human_msg_db = ChatMessage(
+            session_id=self.session_id, sender="human", message=human_message
         )
-        self.vectorstore_memory.add_documents([doc])
+        ai_msg_db = ChatMessage(
+            session_id=self.session_id, sender="ai", message=ai_message
+        )
+        self.session.add(human_msg_db)
+        self.session.add(ai_msg_db)
+        self.session.commit()

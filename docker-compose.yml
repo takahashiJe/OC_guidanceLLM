@@ -57,14 +57,13 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama # モデルデータを永続化
-    # GPUを利用する場合は以下のコメントアウトを解除
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
 
   # (オプション) フロントエンド (Vue.js)
   # frontend:
