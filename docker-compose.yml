@@ -1,0 +1,81 @@
+# docker-compose.yml
+
+version: '3.8'
+
+services:
+  # 1. API Gateway (FastAPI)
+  api_gateway:
+    build:
+      context: ./backend/api_gateway
+    ports:
+      - "8000:8000" # ホストの8000番ポートをコンテナの8000番に接続
+    env_file:
+      - .env # .envファイルの内容を環境変数として読み込む
+    depends_on:
+      - redis
+      - mysql
+    volumes:
+      - ./backend:/app/backend # ソースコードの変更を即時反映
+
+  # 2. Worker (Celery)
+  worker:
+    build:
+      context: ./backend/worker
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - mysql
+      - ollama
+    volumes:
+      - ./backend:/app/backend # ソースコードの変更を即時反映
+      - ./data/vectorstore_knowledge:/app/data/vectorstore_knowledge # 知識DBを永続化
+      - ./data/vectorstore_memory:/app/data/vectorstore_memory # 記憶DBを永続化
+    command: celery -A shared.celery_app worker --loglevel=info
+
+  # 3. Message Broker (Redis) - Celeryのタスクキューとして利用
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+
+  # 4. Database (MySQL)
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: password # .envのDATABASE_URLと合わせる
+      MYSQL_DATABASE: app_db # .envのDATABASE_URLと合わせる
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql # DBデータを永続化
+
+  # 5. LLM Service (Ollama)
+  ollama:
+    image: ollama/ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama # モデルデータを永続化
+    # GPUを利用する場合は以下のコメントアウトを解除
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # (オプション) フロントエンド (Vue.js)
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on:
+  #     - api_gateway
+
+volumes:
+  mysql_data:
+  ollama_data:
+
