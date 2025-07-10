@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # 作成したルーターをインポート
 from . import auth_router
-# from . import chat_router # chat_routerも後で同様にインポートする
+from . import chat_router # ★★★★★ 修正 ★★★★★
 
 # FastAPIアプリケーションのインスタンスを作成
 app = FastAPI(
@@ -15,26 +15,24 @@ app = FastAPI(
 )
 
 # CORS (Cross-Origin Resource Sharing) ミドルウェアの設定
-# これにより、異なるドメインで動作するフロントエンド（Vue.js）からのリクエストを許可する
 origins = [
     "http://localhost",
-    "http://localhost:8080", # Vue.js開発サーバーのデフォルトポート
-    "http://localhost:5173", # Viteを利用したVue.js開発サーバーのデフォルトポート
-    # 本番環境のフロントエンドのURLもここに追加する
+    "http://localhost:8080",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"], # すべてのHTTPメソッドを許可
-    allow_headers=["*"], # すべてのHTTPヘッダーを許可
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
 # アプリケーションにルーターを登録
 app.include_router(auth_router.router)
-# app.include_router(chat_router.router) # chat_routerも後で登録する
+app.include_router(chat_router.router)
 
 @app.get("/", tags=["Root"])
 def read_root():
@@ -42,4 +40,3 @@ def read_root():
     APIサーバーが正常に動作しているかを確認するためのルートエンドポイント。
     """
     return {"message": "Welcome to the Open Campus Guidance LLM API!"}
-

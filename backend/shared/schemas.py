@@ -74,3 +74,12 @@ class ChatResponse(BaseModel):
     session_id: str
     message: str = "対話処理を受け付けました。結果をポーリングしてください。"
 
+class TaskResultResponse(BaseModel):
+    """
+    タスクの結果を取得するエンドポイントのレスポンス。
+    """
+    task_id: str
+    status: Literal["PENDING", "SUCCESS", "FAILURE"]
+    ai_message: Optional[str] = None
+    detail: Optional[str] = None # 失敗時の詳細情報
+
