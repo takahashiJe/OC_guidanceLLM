@@ -1,7 +1,7 @@
 # backend/shared/schemas.py
 
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, Literal
 
 # =======================================
 # トークン関連のスキーマ

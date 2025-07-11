@@ -5,9 +5,8 @@ from celery.result import AsyncResult # Celeryの結果オブジェクトをイ�
 from kombu.exceptions import OperationalError
 from shared.schemas import ChatInput, ChatResponse, TaskResultResponse
 
-from app.dependencies import get_db_session, get_current_user
-from app.schemas.user import User
-from app.celery_app import celery_app
+from .dependencies import get_db_session, get_current_user
+from shared.celery_app import celery_app
 
 router = APIRouter(
     prefix="/chat",

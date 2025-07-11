@@ -1,11 +1,16 @@
+# LangChain core & components & langgraph
+langchain==0.2.5
+langchain-community==0.2.5
+langchain-core==0.2.20  # ★★★ このバージョンは、>=0.2.7, >=0.2.0, そして >=0.2.20 の全ての要求を満たします ★★★
+langchain-ollama==0.1.0
+langchain-experimental==0.0.61
+langchain-text-splitters==0.2.1
+langgraph==0.0.69
+
 celery
 redis
 sqlalchemy
 psycopg2-binary
-langchain
-langchain-community
-langchain-core
-ollama
 scikit-learn
 numpy
 pymysql

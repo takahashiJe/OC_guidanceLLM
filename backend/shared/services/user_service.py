@@ -3,7 +3,7 @@
 from typing import Optional
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from shared.db.models import User
 from shared.schemas import UserCreate # Pydanticモデルをsharedからインポート
 from .auth_service import AuthService
 

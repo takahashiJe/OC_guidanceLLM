@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # 作成したルーターをインポート
 from . import auth_router
-from . import chat_router # ★★★★★ 修正 ★★★★★
+from . import chat_router
 
 # FastAPIアプリケーションのインスタンスを作成
 app = FastAPI(
