@@ -1,6 +1,6 @@
 # backend/worker/app/graph/nodes.py
 
-from backend.shared.state import AgentState
+from shared.state import AgentState
 
 def retrieve_knowledge_node(state: AgentState, retriever):
     """

@@ -4,27 +4,36 @@ import os
 from contextlib import contextmanager
 
 from langchain_community.chat_models import ChatOllama
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import OllamaEmbeddings
 from langchain_community.vectorstores import Chroma
 from sqlalchemy.orm import Session
 
 # Celery, DB, Service, Graphの各コンポーネントをインポート
 from shared.celery_app import celery_app
-from .db.session import SessionLocal
-from .services.memory_service import MemoryService
+from shared.db.session import SessionLocal
+from shared.services.memory_service import MemoryService
 from .graph.build import build_graph, AgentState # グラフと状態定義をインポート
 
 # --- Worker起動時に一度だけ読み込む設定 ---
 llm = ChatOllama(
-    model=os.getenv("OLLAMA_MODEL", "llama3:8b-instruct-q5_K_M"),
-    base_url=os.getenv("OLLAMA_BASE_URL", "http://ollama:11434"),
+    model="qwen2.5:32b-instruct",
+        # model="gemma3:27b-it-qat",
+        # model="gemma3:27b",
+        # model="llama3:70b",
+        # model="elyza-jp-chat",
+    base_url="http://ollama:11434",
 )
-embedding_model = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
+
+EMBEDDINGS = OllamaEmbeddings(
+    model="nomic-embed-text",
+    base_url="http://localhost:11434"
+)
+
 CHROMA_KNOWLEDGE_PATH = "/app/data/vectorstore_knowledge"
 CHROMA_MEMORY_PATH = "/app/data/vectorstore_memory"
 vectorstore_knowledge = Chroma(
     persist_directory=CHROMA_KNOWLEDGE_PATH,
-    embedding_function=embedding_model,
+    embedding_function=EMBEDDINGS,
 )
 rag_retriever = vectorstore_knowledge.as_retriever(search_kwargs={"k": 3})
 vectorstore_memory = Chroma(

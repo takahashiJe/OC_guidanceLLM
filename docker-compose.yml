@@ -1,80 +1,197 @@
-# docker-compose.yml
-
-version: '3.8'
+# docker-compose.yml (開発用)
 
 services:
-  # 1. API Gateway (FastAPI)
+  # --- API Gateway ---
   api_gateway:
     build:
-      context: ./backend/api_gateway
+      context: .
+      dockerfile: ./backend/api_gateway/Dockerfile
     ports:
-      - "8000:8000" # ホストの8000番ポートをコンテナの8000番に接続
-    env_file:
-      - .env # .envファイルの内容を環境変数として読み込む
-    depends_on:
-      - redis
-      - mysql
+      - "8000:8000"
+    env_file: .env
     volumes:
-      - ./backend:/app/backend # ソースコードの変更を即時反映
+      # 開発中はソースコードの変更を即時反映させる
+      - ./backend/api_gateway:/app/api_gateway
+      - ./backend/shared:/app/shared
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
-  # 2. Worker (Celery)
+  # --- Worker ---
   worker:
     build:
-      context: ./backend/worker
-    env_file:
-      - .env
+      context: .
+      dockerfile: ./backend/worker/Dockerfile
+    env_file: .env
+    volumes:
+      # 開発中はソースコードの変更を即時反映させる
+      - ./backend/worker:/app/worker
+      - ./backend/shared:/app/shared
+      - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
+      - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
     depends_on:
-      - redis
-      - mysql
-      - ollama
-    volumes:
-      - ./backend:/app/backend # ソースコードの変更を即時反映
-      - ./data/vectorstore_knowledge:/app/data/vectorstore_knowledge # 知識DBを永続化
-      - ./data/vectorstore_memory:/app/data/vectorstore_memory # 記憶DBを永続化
-    command: celery -A shared.celery_app worker --loglevel=info
-
-  # 3. Message Broker (Redis) - Celeryのタスクキューとして利用
-  redis:
-    image: redis:7.2-alpine
-    ports:
-      - "6379:6379"
-
-  # 4. Database (MySQL)
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: password # .envのDATABASE_URLと合わせる
-      MYSQL_DATABASE: app_db # .envのDATABASE_URLと合わせる
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql # DBデータを永続化
-
-  # 5. LLM Service (Ollama)
-  ollama:
-    image: ollama/ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama # モデルデータを永続化
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_started
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
 
-  # (オプション) フロントエンド (Vue.js)
+  # --- Ollama ---
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # --- Redis ---
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Database ---
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 15s      # 確認の間隔を15秒に
+      timeout: 10s       # タイムアウトを10秒に
+      retries: 10        # リトライ回数を10回に
+      start_period: 60s  # 起動後、最初の60秒はチェックを待つ
+  
+  # # --- Frontend (開発用) ---
   # frontend:
+  #   # frontendディレクトリにあるDockerfileを使用
   #   build:
   #     context: ./frontend
+  #     # Dockerfile内で開発サーバーを起動するように設定
   #   ports:
-  #     - "8080:8080"
+  #     # ホストの5173番ポートをコンテナの5173番に接続 (Viteのデフォルト)
+  #     - "5173:5173" 
+  #   volumes:
+  #     # ソースコードの変更を即時反映させる
+  #     - ./frontend:/app
+  #     # node_modulesはホストと共有しない(パフォーマンスと環境差異のため)
+  #     - /app/node_modules
   #   depends_on:
+  #     # API Gatewayが起動してからフロントエンドを起動する
   #     - api_gateway
 
 volumes:
-  mysql_data:
+  db_data:
   ollama_data:
 
+
+# # docker-compose.yml (本番用)
+
+# services:
+#   # --- API Gateway (サーバー1で実行) ---
+#   api_gateway:
+#     build:
+#       context: .
+#       dockerfile: ./backend/api_gateway/Dockerfile
+#     ports: ["8000:8000"]
+#     env_file: .env
+#     depends_on:
+#       db:
+#         condition: service_healthy
+#       redis:
+#         condition: service_started
+#     profiles: [api-server]
+
+#   # --- Worker (サーバー2〜4で実行) ---
+#   worker:
+#     build:
+#       context: .
+#       dockerfile: ./backend/worker/Dockerfile
+#     env_file: .env
+#     volumes:
+#       - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
+#       - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
+#     depends_on:
+#       ollama:
+#         condition: service_started
+#     deploy:
+#       resources:
+#         reservations:
+#           devices:
+#             - driver: nvidia
+#               count: 1
+#               capabilities: [gpu]
+#     profiles: [worker-server]
+
+#   # --- Ollama (サーバー2〜4で実行) ---
+#   ollama:
+#     image: ollama/ollama:latest
+#     ports: ["11434:11434"]
+#     volumes:
+#       - ollama_data:/root/.ollama
+#     deploy:
+#       resources:
+#         reservations:
+#           devices:
+#             - driver: nvidia
+#               count: all
+#               capabilities: [gpu]
+#     profiles: [worker-server]
+
+#   # --- Redis (サーバー1で実行) ---
+#   redis:
+#     image: redis:7.2-alpine
+#     ports: ["6379:6379"]
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 10s
+#     profiles: [api-server]
+
+#   # --- Database (サーバー1で実行) ---
+#   db:
+#     image: mysql:8.0
+#     environment:
+#       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+#       MYSQL_DATABASE: ${MYSQL_DATABASE}
+#       MYSQL_USER: ${MYSQL_USER}
+#       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+#     ports: ["3306:3306"]
+#     volumes:
+#       - db_data:/var/lib/mysql
+#     healthcheck:
+#       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+#       interval: 10s
+#     profiles: [api-server]
+
+# volumes:
+#   db_data:
+#   ollama_data:

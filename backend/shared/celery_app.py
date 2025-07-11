@@ -1,14 +1,22 @@
 # backend/shared/celery_app.py
 
+import os
 from celery import Celery
-from backend.worker.app.core.config import settings
+
+# 環境変数から接続情報を取得
+rabbitmq_host = os.getenv('RABBITMQ_HOST', 'localhost')
+redis_host = os.getenv('REDIS_HOST', 'localhost')
+
+# Celeryの接続情報
+broker_url = f'amqp://guest:guest@{rabbitmq_host}:5672//'
+result_backend_url = f'redis://{redis_host}:6379/0'
 
 # Celeryアプリケーションのインスタンスを作成
 celery_app = Celery(
     "worker",
-    broker=settings.CELERY_BROKER_URL,
-    backend=settings.CELERY_RESULT_BACKEND,
-    include=["backend.worker.app.tasks"] # 実行するタスクが定義されているモジュールを指定
+    broker=broker_url,
+    backend=result_backend_url,
+    include=["worker.app.tasks"] # 実行するタスクが定義されているモジュールを指定
 )
 
 # Celeryの設定（オプション）

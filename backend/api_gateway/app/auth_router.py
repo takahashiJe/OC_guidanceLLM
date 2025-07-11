@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 # 依存関係とサービス、スキーマをインポート
 # (これらのファイルは別途作成・更新が必要です)
 from .dependencies import get_db_session, get_user_service, get_auth_service
-from worker.app.services.user_service import UserService
-from worker.app.services.auth_service import AuthService
+from shared.services.user_service import UserService
+from shared.services.auth_service import AuthService
 from shared.schemas import UserCreate, UserPublic, Token
 
 # ルーターのインスタンスを作成

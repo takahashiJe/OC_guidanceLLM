@@ -6,10 +6,10 @@ from jose import JWTError
 from sqlalchemy.orm import Session
 
 # 関連するモジュールやサービスをインポート
-from worker.app.db.session import SessionLocal
-from worker.app.services.auth_service import AuthService
-from worker.app.services.user_service import UserService
-from worker.app.db.models import User
+from shared.db.session import SessionLocal
+from shared.services.auth_service import AuthService
+from shared.services.user_service import UserService
+from shared.db.models import User
 from shared.schemas import TokenData
 
 # --- 依存関係を提供する関数の定義 ---

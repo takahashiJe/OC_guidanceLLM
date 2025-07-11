@@ -8,8 +8,8 @@ from sqlalchemy.orm import Session
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_community.embeddings import OllamaEmbeddings # OllamaEmbeddings をインポート
 
-from app.models import ChatMessage
-from app.services.db_service import get_messages_by_session_id
+from shared.db.models import ChatMessage
+from shared.db.db_service import get_messages_by_session_id
 
 # ロギング設定
 logging.basicConfig(level=logging.INFO)
@@ -20,12 +20,9 @@ class MemoryService:
         self.session = session
         self.session_id = session_id
         self.llm_service = llm_service
-        # OllamaEmbeddings を初期化
-        # 事前に `ollama pull nomic-embed-text` を実行しておく必要があります
-        # Ollamaサービスがローカルで実行されていることを前提とします
         self.embedder = OllamaEmbeddings(
             model="nomic-embed-text",
-            # base_url="http://host.docker.internal:11434" # DockerコンテナからホストのOllamaに接続する場合など
+            base_url="http://ollama:11434"
         )
 
     def get_history(self) -> List[BaseMessage]:

@@ -45,7 +45,6 @@ def post_chat_message(
         )
 
 
-# ★★★★★ ここから追加 ★★★★★
 @router.get("/results/{task_id}", response_model=TaskResultResponse)
 def get_task_result(task_id: str, current_user: User = Depends(get_current_user)):
     """
