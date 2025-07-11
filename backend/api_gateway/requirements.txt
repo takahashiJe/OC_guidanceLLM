@@ -3,8 +3,9 @@ uvicorn[standard]
 sqlalchemy
 psycopg2-binary
 python-jose[cryptography]
-passlib[bcrypt]
 celery
 redis
 python-multipart
 pymysql
+
+passlib[bcrypt]

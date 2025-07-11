@@ -1,6 +1,18 @@
 # docker-compose.yml (開発用)
 
 services:
+  db-init:
+    build:
+      context: .
+      dockerfile: ./backend/api_gateway/Dockerfile
+    env_file: .env
+    volumes:
+      - ./backend:/app/backend
+      - ./script:/app/script
+    command: ["python", "/app/script/init_db.py"]
+    depends_on:
+      db:
+        condition: service_healthy
   # --- API Gateway ---
   api_gateway:
     build:

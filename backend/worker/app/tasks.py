@@ -38,7 +38,7 @@ vectorstore_knowledge = Chroma(
 rag_retriever = vectorstore_knowledge.as_retriever(search_kwargs={"k": 3})
 vectorstore_memory = Chroma(
     persist_directory=CHROMA_MEMORY_PATH,
-    embedding_function=embedding_model,
+    embedding_function=EMBEDDINGS,
 )
 
 @contextmanager

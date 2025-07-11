@@ -8,7 +8,9 @@ WORKDIR /app
 ENV PYTHONPATH="/app/backend"
 
 COPY ./backend/api_gateway/requirements.txt /app/requirements.txt
+# 依存関係をインストールする前に、全ての種類のbcryptを強制的にアンインストールする
 RUN pip install --no-cache-dir --upgrade pip && \
+    pip uninstall -y bcrypt py-bcrypt && \
     pip install --no-cache-dir -r /app/requirements.txt
 
 # backendディレクトリ全体をコンテナにコピー

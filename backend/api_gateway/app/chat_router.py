@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 from celery.result import AsyncResult # Celeryの結果オブジェクトをインポート
 from kombu.exceptions import OperationalError
 from shared.schemas import ChatInput, ChatResponse, TaskResultResponse
+from shared.db.models import User
 
 from .dependencies import get_db_session, get_current_user
 from shared.celery_app import celery_app

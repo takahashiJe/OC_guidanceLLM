@@ -7,10 +7,18 @@ langchain-experimental==0.0.61
 langchain-text-splitters==0.2.1
 langgraph==0.0.69
 
+# ベクトルDB
+chromadb>=0.5.3
+
+# celeryとredisクライアント
+pika
 celery
 redis
+
 sqlalchemy
 psycopg2-binary
 scikit-learn
 numpy
 pymysql
+markdown-it-py
+markdown
