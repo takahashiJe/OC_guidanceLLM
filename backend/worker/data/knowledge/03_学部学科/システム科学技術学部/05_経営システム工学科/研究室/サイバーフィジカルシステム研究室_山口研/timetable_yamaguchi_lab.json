@@ -1,0 +1,162 @@
+[
+  {
+    "start_time": "09:30",
+    "end_time": "10:20",
+    "location": "大学院棟D404",
+    "event_name": "Human Tower Battle",
+    "description": "ユニークなポーズをキメて，私は『私』を何人積める？",
+    "presenter": "佐藤 翔真"
+  },
+  {
+    "start_time": "09:30",
+    "end_time": "10:20",
+    "location": "大学院棟D404",
+    "event_name": "Story Clash",
+    "description": "君はAIに勝てるか？即興作文",
+    "presenter": "小川 春翔"
+  },
+  {
+    "start_time": "09:30",
+    "end_time": "10:20",
+    "location": "大学院棟D404",
+    "event_name": "Automated Website Creator",
+    "description": "Webサイト3分クッキング",
+    "presenter": "高橋 夢叶"
+  },
+  {
+    "start_time": "09:30",
+    "end_time": "10:20",
+    "location": "大学院棟D404",
+    "event_name": "Graffiti in Motion",
+    "description": "落書きを生き生きと動かそう！",
+    "presenter": "成田 明音"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:20",
+    "location": "大学院棟D404",
+    "event_name": "Server Management Dashboard",
+    "description": "計算機のお熱を計りましょう．AIの仕事ぶりをリアルタイムで可視化",
+    "presenter": "吉田 快"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:20",
+    "location": "大学院棟D404",
+    "event_name": "Human Tower Battle",
+    "description": "ユニークなポーズをキメて，私は『私』を何人積める？",
+    "presenter": "佐藤 翔真"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:20",
+    "location": "大学院棟D404",
+    "event_name": "Campus Attraction Guide",
+    "description": "県大の見所をご案内しま〜す．話しかけてね．AIより",
+    "presenter": "高橋 潤大"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:20",
+    "location": "大学院棟D404",
+    "event_name": "Summon Weapons Adventure",
+    "description": "身近なものを武器に変えて冒険に出かけよう！",
+    "presenter": "新井 美羽"
+  },
+  {
+    "start_time": "11:30",
+    "end_time": "12:20",
+    "location": "大学院棟D404",
+    "event_name": "Server Management Dashboard",
+    "description": "計算機のお熱を計りましょう．AIの仕事ぶりをリアルタイムで可視化",
+    "presenter": "吉田 快"
+  },
+  {
+    "start_time": "11:30",
+    "end_time": "12:20",
+    "location": "大学院棟D404",
+    "event_name": "Human Tower Battle",
+    "description": "ユニークなポーズをキメて，私は『私』を何人積める？",
+    "presenter": "佐藤 翔真"
+  },
+  {
+    "start_time": "11:30",
+    "end_time": "12:20",
+    "location": "大学院棟D404",
+    "event_name": "Automated Website Creator",
+    "description": "Webサイト3分クッキング",
+    "presenter": "高橋 夢叶"
+  },
+  {
+    "start_time": "11:30",
+    "end_time": "12:20",
+    "location": "大学院棟D404",
+    "event_name": "Graffiti in Motion",
+    "description": "落書きを生き生きと動かそう！",
+    "presenter": "成田 明音"
+  },
+  {
+    "start_time": "12:30",
+    "end_time": "13:20",
+    "location": "大学院棟D404",
+    "event_name": "Campus Attraction Guide",
+    "description": "県大の見所をご案内しま〜す．話しかけてね．AIより",
+    "presenter": "高橋 潤大"
+  },
+  {
+    "start_time": "12:30",
+    "end_time": "13:20",
+    "location": "大学院棟D404",
+    "event_name": "Summon Weapons Adventure",
+    "description": "身近なものを武器に変えて冒険に出かけよう！",
+    "presenter": "新井 美羽"
+  },
+  {
+    "start_time": "12:30",
+    "end_time": "13:20",
+    "location": "大学院棟D404",
+    "event_name": "Story Clash",
+    "description": "君はAIに勝てるか？即興作文",
+    "presenter": "小川 春翔"
+  },
+  {
+    "start_time": "12:30",
+    "end_time": "13:20",
+    "location": "大学院棟D404",
+    "event_name": "AI Rhythmix",
+    "description": "ダンスに合わせて華麗に変身！",
+    "presenter": "山根 拓真"
+  },
+  {
+    "start_time": "14:30",
+    "end_time": "15:20",
+    "location": "大学院棟D404",
+    "event_name": "Server Management Dashboard",
+    "description": "計算機のお熱を計りましょう．AIの仕事ぶりをリアルタイムで可視化",
+    "presenter": "吉田 快"
+  },
+  {
+    "start_time": "14:30",
+    "end_time": "15:20",
+    "location": "大学院棟D404",
+    "event_name": "Campus Attraction Guide",
+    "description": "県大の見所をご案内しま〜す．話しかけてね．AIより",
+    "presenter": "高橋 潤大"
+  },
+  {
+    "start_time": "14:30",
+    "end_time": "15:20",
+    "location": "大学院棟D404",
+    "event_name": "Automated Website Creator",
+    "description": "Webサイト3分クッキング",
+    "presenter": "高橋 夢叶"
+  },
+  {
+    "start_time": "14:30",
+    "end_time": "15:20",
+    "location": "大学院棟D404",
+    "event_name": "AI Rhythmix",
+    "description": "ダンスに合わせて華麗に変身！",
+    "presenter": "山根 拓真"
+  }
+]

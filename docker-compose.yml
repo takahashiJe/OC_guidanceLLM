@@ -43,6 +43,7 @@ services:
       - ./backend/shared:/app/shared
       - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
       - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
+      - ./script:/app/script
     depends_on:
       db:
         condition: service_healthy

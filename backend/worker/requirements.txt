@@ -22,3 +22,7 @@ numpy
 pymysql
 markdown-it-py
 markdown
+
+# ベクトルストア初期化時に必要
+jq
+unstructured

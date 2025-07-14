@@ -1,0 +1,107 @@
+[
+  {
+    "start_time": "09:00",
+    "end_time": "15:30",
+    "location": "共通施設棟",
+    "event_name": "受付",
+    "description": "オープンキャンパスの受付を開始します。正面エントランスにお越しください。"
+  },
+  {
+    "start_time": "09:30",
+    "end_time": "09:50",
+    "location": "K205/AVホール",
+    "event_name": "当日案内",
+    "description": "本日のオープンキャンパスの概要や歩き方についてご案内します。"
+  },
+  {
+    "start_time": "09:30",
+    "end_time": "15:30",
+    "location": "各学部棟・特別実験棟など",
+    "event_name": "研究室公開",
+    "description": "各学科の実験施設や研究室を公開しています。ご自由に見学ください。"
+  },
+  {
+    "start_time": "10:00",
+    "end_time": "10:20",
+    "location": "共通施設棟3階 中講義室",
+    "event_name": "学科説明会",
+    "description": "各学科の教員が、学びの特色や内容について詳しく説明します。"
+  },
+  {
+    "start_time": "10:00",
+    "end_time": "15:00",
+    "location": "ラーニングコモンズ",
+    "event_name": "進学相談申込受付",
+    "description": "個別進学相談の申込を受け付けています。"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:30",
+    "location": "各会場",
+    "event_name": "体験型模擬講義",
+    "description": "大学の学びをリアルに体験できる模擬講義です。各学科の会場は当日配布のガイドでご確認ください。"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:30",
+    "location": "AVホール",
+    "event_name": "保護者向け説明会",
+    "description": "大学の特徴や入試、学費、学生支援について保護者の方向けにご説明します。"
+  },
+  {
+    "start_time": "10:30",
+    "end_time": "11:30",
+    "location": "正面エントランス受付",
+    "event_name": "キャンパスツアー①",
+    "description": "在学生がキャンパス内の主要な施設をご案内します。"
+  },
+  {
+    "start_time": "11:00",
+    "end_time": "15:30",
+    "location": "図書館",
+    "event_name": "スチューデントカフェ・サークル紹介",
+    "description": "在学生と気軽にお話ができるカフェスペースです。サークル活動の紹介も行っています。"
+  },
+  {
+    "start_time": "11:30",
+    "end_time": "13:30",
+    "location": "カフェテリア",
+    "event_name": "無料昼食体験",
+    "description": "大学の食堂で、無料の昼食を体験できます（数量限定）。"
+  },
+  {
+    "start_time": "12:15",
+    "end_time": "12:45",
+    "location": "図書館",
+    "event_name": "ジャズバンドサークル パフォーマンス",
+    "description": "ジャズバンドサークルによるスペシャルライブをお楽しみください。"
+  },
+  {
+    "start_time": "12:00",
+    "end_time": "15:30",
+    "location": "ラーニングコモンズ",
+    "event_name": "個別進学相談",
+    "description": "教員や在学生が、あなたの疑問や相談に個別にお答えします。"
+  },
+  {
+    "start_time": "13:00",
+    "end_time": "13:30",
+    "location": "K205",
+    "event_name": "合同学科説明会",
+    "description": "各学科の特色をまとめてご紹介します。どの学科にするか迷っている方におすすめです。"
+  },
+  {
+    "start_time": "13:30",
+    "end_time": "14:30",
+    "location": "正面エントランス受付",
+    "event_name": "キャンパスツアー②",
+    "description": "在学生がキャンパス内の主要な施設をご案内します。（本日2回目）"
+  },
+  {
+    "start_time": "13:45",
+    "end_time": "14:30",
+    "location": "K205",
+    "event_name": "総合型選抜プレゼン対策講座",
+    "description": "実際の審査員が、プレゼンテーションのポイントを解説する実践的な講座です。"
+  }
+]
