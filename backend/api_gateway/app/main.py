@@ -17,6 +17,7 @@ app = FastAPI(
 # CORS (Cross-Origin Resource Sharing) ミドルウェアの設定
 origins = [
     "http://localhost",
+    "http://localhost:80", # フロントエンドがポート80で動作する場合
     "http://localhost:8080",
     "http://localhost:5173",
 ]
@@ -28,7 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # アプリケーションにルーターを登録
 app.include_router(auth_router.router)

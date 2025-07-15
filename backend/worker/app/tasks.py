@@ -11,6 +11,7 @@ from shared.celery_app import celery_app
 from shared.db.session import SessionLocal
 from .services.memory_service import MemoryService
 from .graph.build import build_graph, AgentState
+from .rag.graph_retriever import get_graph_context
 
 # --- Worker起動時に一度だけ読み込む設定 ---
 llm = ChatOllama(
@@ -19,9 +20,9 @@ llm = ChatOllama(
     # model="gemma3:27b",
     # model="llama3:70b",
     # model="elyza-jp-chat",
-    base_url="http://ollama:11434", temperature=0.7)
+    base_url="http://ollama:11434", temperature=0.0)
 
-EMBEDDINGS = OllamaEmbeddings(model="nomic-embed-text", base_url="http://ollama:11434")
+EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
 CHROMA_KNOWLEDGE_PATH = "/app/data/vectorstore_knowledge"
 CHROMA_MEMORY_PATH = "/app/data/vectorstore_memory"
 vectorstore_knowledge = Chroma(persist_directory=CHROMA_KNOWLEDGE_PATH, embedding_function=EMBEDDINGS)
@@ -48,7 +49,7 @@ def run_chat_graph(user_id: int, session_id: str, user_input: str) -> str:
         memory_service = MemoryService(db_session=db, vectorstore_memory=vectorstore_memory)
         history_messages = memory_service.get_history(user_id=user_id, session_id=session_id)
         
-        app = build_graph(rag_retriever=rag_retriever, llm=llm)
+        app = build_graph(graph_retriever=get_graph_context, llm=llm) # build_graphにグラフリトリーバーを渡す
 
         # ★ AgentStateの新しい定義に合わせて、initial_stateを修正
         initial_state = AgentState(

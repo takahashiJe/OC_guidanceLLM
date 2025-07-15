@@ -11,9 +11,9 @@ print("--- RAG診断スクリプトを開始します ---")
 
 # --- 設定 ---
 # tasks.pyと同じ設定を使用
-EMBEDDINGS = OllamaEmbeddings(model="nomic-embed-text", base_url="http://ollama:11434")
+EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
 CHROMA_KNOWLEDGE_PATH = "backend/worker/data/vectorstore_knowledge"
-TEST_QUERY = "秋田県立大学の山口研って、どんなところ？"
+TEST_QUERY = "サイバーフィジカルシステム研究室（山口研）のオープンキャンパス出展内容を教えてください"
 
 try:
     # 1. 既存のベクトルストアを読み込む
@@ -27,7 +27,7 @@ try:
 
     # 2. 類似度検索を実行
     print(f"\n以下のクエリで検索を実行します:\n'{TEST_QUERY}'")
-    retrieved_docs = vectorstore.similarity_search(TEST_QUERY, k=5)
+    retrieved_docs = vectorstore.similarity_search(TEST_QUERY, k=10)
 
     # 3. 結果を表示
     if not retrieved_docs:

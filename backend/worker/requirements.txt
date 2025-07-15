@@ -9,6 +9,9 @@ langgraph==0.0.69
 
 # ベクトルDB
 chromadb>=0.5.3
+neo4j
+py2neo
+spacy
 
 # celeryとredisクライアント
 pika
@@ -26,3 +29,7 @@ markdown
 # ベクトルストア初期化時に必要
 jq
 unstructured
+
+# SpaCy Japanese tokenizer dependencies for ja_core_news_sm
+sudachipy
+sudachidict_core

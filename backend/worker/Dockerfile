@@ -13,7 +13,8 @@ ENV PYTHONPATH="/app/backend"
 
 COPY ./backend/worker/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r /app/requirements.txt
+    pip install --no-cache-dir -r /app/requirements.txt && \
+    python -m spacy download ja_core_news_sm --no-deps
 
 # backendディレクトリ全体をコンテナにコピー
 COPY ./backend/ /app/backend/

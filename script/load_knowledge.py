@@ -29,7 +29,12 @@ from langchain_community.vectorstores.utils import filter_complex_metadata
 # --- 定数設定 ---
 KNOWLEDGE_BASE_DIR = "backend/worker/data/knowledge"
 VECTORSTORE_PATH = "backend/worker/data/vectorstore_knowledge"
-EMBEDDINGS = OllamaEmbeddings(model="nomic-embed-text", base_url="http://ollama:11434")
+EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
+
+def split_documents(documents):
+    # チャンクサイズとオーバーラップを調整 (ハルシネーション対策)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)
+    return text_splitter.split_documents(documents)
 
 def load_documents(directory: str):
     all_docs = []
@@ -48,7 +53,8 @@ def load_documents(directory: str):
     return all_docs
 
 def split_documents(documents):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    # ★★★ chunk_sizeとchunk_overlapの値を変更 ★★★
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50) # 1000, 100 から変更
     return text_splitter.split_documents(documents)
 
 def main():
