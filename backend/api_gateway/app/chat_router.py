@@ -3,11 +3,13 @@ from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 from celery.result import AsyncResult # Celeryの結果オブジェクトをインポート
 from kombu.exceptions import OperationalError
-from shared.schemas import ChatInput, ChatResponse, TaskResultResponse
-from shared.db.models import User
+from typing import List
 
+from shared.schemas import ChatInput, ChatResponse, TaskResultResponse, HistoryTurn, LatestSessionResponse
+from shared.db.models import User
 from .dependencies import get_db_session, get_current_user
 from shared.celery_app import celery_app
+from shared.db import crud # crudをインポート
 
 router = APIRouter(
     prefix="/chat",
@@ -73,3 +75,36 @@ def get_task_result(task_id: str, current_user: User = Depends(get_current_user)
             status="FAILURE",
             detail=error_info
         )
+
+@router.get("/history/{session_id}", response_model=List[HistoryTurn])
+def get_chat_history(
+    session_id: str,
+    db: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    指定されたセッションIDのチャット履歴を全て取得する。
+    """
+    history = crud.get_history_by_session_id_all(db, session_id=session_id, user_id=current_user.id)
+    
+    if not history:
+        # 履歴が見つからない場合は404エラーを返す
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="指定されたセッションのチャット履歴が見つかりません。",
+        )
+    
+    return history
+
+@router.get("/sessions/latest", response_model=LatestSessionResponse)
+def get_latest_session(
+    db: Session = Depends(get_db_session),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    ログイン中のユーザーの最新の会話セッションIDを取得する。
+    """
+    latest_session_id = crud.get_latest_session_id(db, user_id=current_user.id)
+    
+    # 履歴が全くないユーザーの場合は、session_idはnullになる
+    return {"session_id": latest_session_id}

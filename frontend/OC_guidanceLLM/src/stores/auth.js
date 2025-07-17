@@ -1,157 +1,111 @@
 // stores/auth.js
 import { defineStore } from 'pinia';
-import { loginUser, registerUser } from '../services/api'; 
+import { jwtDecode } from 'jwt-decode';
+import apiClient from '../services/api'; // 作成したapiClientをインポート
+import router from '../router';
 
-/**
- * @typedef {Object} UserInfo
- * @property {string} username - The username of the logged-in user.
- * // Add other user properties as needed (e.g., email, id)
- */
-
-/**
- * @typedef {Object} AuthState
- * @property {boolean} isLoggedIn - Indicates if the user is currently logged in.
- * @property {string | null} accessToken - The JWT access token received from the backend.
- * @property {UserInfo | null} user - Information about the logged-in user.
- * @property {boolean} isLoading - Indicates if an authentication operation is in progress.
- * @property {string | null} errorMessage - Stores any error message from authentication operations.
- */
-
-/**
- * Auth store for managing user authentication state.
- * Handles login, logout, and token persistence in localStorage.
- */
 export const useAuthStore = defineStore('auth', {
-  /**
-   * @returns {AuthState} The initial state of the authentication store.
-   */
   state: () => ({
-    isLoggedIn: false,
-    accessToken: null,
-    user: null,
+    accessToken: localStorage.getItem('accessToken'),
+    // ユーザー名はトークンから取得するか、ログイン時のレスポンスに含めるのが望ましい
+    // ここではシンプルにするため、ログイン状態のみを管理
     isLoading: false,
     errorMessage: null,
+    successMessage: null, 
   }),
+
+  getters: {
+    isAuthenticated: (state) => !!state.accessToken,
+  },
 
   actions: {
     /**
-     * Initializes the authentication state by checking for an existing token in localStorage.
-     * If a token is found, sets the user as logged in.
-     */
-    initAuth() {
-      console.log('AuthStore: Initializing authentication state.');
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          this.accessToken = token;
-          this.isLoggedIn = true;
-          // In a real application, you would typically decode the token
-          // or make an API call to get user info based on the token.
-          // For now, we'll set a dummy user.
-          this.user = { username: 'authenticated_user' }; 
-          console.log('AuthStore: Found access token in localStorage. User is logged in.');
-        } else {
-          console.log('AuthStore: No access token found in localStorage.');
-        }
-      } catch (error) {
-        console.error('AuthStore: Error initializing auth from localStorage:', error);
-        this.clearAuth(); // Clear any corrupted state
-      }
-    },
-
-    /**
-     * Attempts to log in the user with provided credentials.
-     * @param {Object} credentials - User login credentials.
-     * @param {string} credentials.username - The user's username.
-     * @param {string} credentials.password - The user's password.
-     * @returns {Promise<void>} A promise that resolves when login is attempted.
+     * ログイン処理
      */
     async login(credentials) {
       this.isLoading = true;
       this.errorMessage = null;
-      console.log('AuthStore: Attempting login for user:', credentials.username);
-
       try {
-        // ★★★ ダミーAPI呼び出しを実際のAPI呼び出しに置き換え ★★★
-        const response = await loginUser(credentials); 
+        const formData = new URLSearchParams();
+        formData.append('username', credentials.username);
+        formData.append('password', credentials.password);
         
-        const { access_token } = response; // レスポンスからアクセストークンを取得
+        const response = await apiClient.post('/auth/login', formData, {
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        });
 
-        localStorage.setItem('accessToken', access_token);
+        const { access_token } = response.data;
         this.accessToken = access_token;
-        this.isLoggedIn = true;
-        // 実際のユーザー情報をレスポンスから取得できる場合は設定
-        this.user = { username: credentials.username }; // 仮のユーザー情報
-        console.log('AuthStore: Login successful!');
-        // リダイレクトはApp.vueのウォッチャーが処理
-      } catch (error) {
-        this.errorMessage = error.message; // APIサービスからスローされたエラーメッセージ
-        console.error('AuthStore: Login API error:', error);
+        localStorage.setItem('accessToken', access_token);
+        
+        // ログイン成功後、チャットページへリダイレクト
+        router.push('/chat');
+
+      } catch (err) {
+        this.errorMessage = err.response?.data?.detail || 'ユーザー名またはパスワードが正しくありません。';
+        throw new Error(this.errorMessage);
       } finally {
         this.isLoading = false;
       }
     },
 
     /**
-     * Attempts to register a new user with provided details.
-     * @param {Object} details - User registration details.
-     * @param {string} details.username - The desired username.
-     * @param {string} details.password - The desired password.
-     * @returns {Promise<void>} A promise that resolves when registration is attempted.
+     * 新規登録処理
      */
     async register(details) {
       this.isLoading = true;
       this.errorMessage = null;
-      console.log('AuthStore: Attempting registration for user:', details.username);
-
+      this.successMessage = null;
       try {
-        // ★★★ ダミーAPI呼び出しを実際のAPI呼び出しに置き換え ★★★
-        const response = await registerUser(details); 
+        // 新規登録APIはJSON形式でデータを送信
+        await apiClient.post('/auth/register', {
+          username: details.username,
+          password: details.password,
+        });
+        
+        // 登録成功時のメッセージを設定
+        this.successMessage = '新規登録が完了しました。ログインしてください。';
 
-        // 登録成功後、通常は自動ログインさせるか、ログイン画面にリダイレクト
-        // 今回は登録後自動ログインさせる
-        const { access_token } = response; // 登録APIがトークンを返す場合
-        if (access_token) {
-          localStorage.setItem('accessToken', access_token);
-          this.accessToken = access_token;
-          this.isLoggedIn = true;
-          this.user = { username: details.username };
-          console.log('AuthStore: Registration successful and logged in!');
-        } else {
-          // 登録APIがトークンを返さない場合、ログイン画面へリダイレクト
-          // router.push('/login'); // Vue Routerをインポートして使用
-          this.errorMessage = 'Registration successful, please log in.';
-          console.log('AuthStore: Registration successful, no auto-login token.');
-        }
-      } catch (error) {
-        this.errorMessage = error.message; // APIサービスからスローされたエラーメッセージ
-        console.error('AuthStore: Registration API error:', error);
+      } catch (err) {
+        this.errorMessage = err.response?.data?.detail || 'このユーザー名は既に使用されているなど、登録に失敗しました。';
+        throw new Error(this.errorMessage);
       } finally {
         this.isLoading = false;
       }
     },
 
     /**
-     * Logs out the current user by clearing the access token from localStorage.
+     * ログアウト処理
      */
     logout() {
-      console.log('AuthStore: Logging out user.');
-      this.clearAuth();
-      // Router redirection is handled by App.vue watcher
+      this.accessToken = null;
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('sessionId'); // セッション情報もクリア
+      // ログアウト後、ログインページへリダイレクト
+      router.push('/login');
     },
 
     /**
-     * Clears all authentication-related state and localStorage items.
+     * ★★★ 新しく追加したアクション ★★★
+     * トークンの有効性をクライアントサイドでチェックする。
      */
-    clearAuth() {
-      localStorage.removeItem('accessToken');
-      // Also clear chat session ID on logout to start fresh conversation
-      localStorage.removeItem('sessionId'); 
-      this.isLoggedIn = false;
-      this.accessToken = null;
-      this.user = null;
-      this.errorMessage = null;
-      console.log('AuthStore: Authentication state cleared.');
-    }
+    checkTokenValidity() {
+      if (!this.accessToken) {
+        return;
+      }
+
+      try {
+        const decodedToken = jwtDecode(this.accessToken);
+        const currentTime = Date.now() / 1000;
+
+        if (decodedToken.exp < currentTime) {
+          console.log('クライアントサイドでトークンの期限切れを検知しました。');
+          this.logout();
+        }
+      } catch (error) {
+        console.error('トークンの解析に失敗しました。不正なトークンの可能性があります。', error);
+        this.logout();
+      }
+    },
   },
 });

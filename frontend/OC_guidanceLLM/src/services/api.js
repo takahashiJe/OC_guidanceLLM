@@ -1,110 +1,53 @@
-    // services/api.js
-    import axios from 'axios';
+// services/api.js
+import axios from 'axios';
+import { useAuthStore } from '../stores/auth';
 
-    const API_BASE_URL = 'http://localhost:8000'; // 開発時はlocalhost:8000にマッピング
+// 1. APIクライアントの作成と基本設定
+const apiClient = axios.create({
+  // 環境変数からAPIのベースURLを読み込むか、デフォルト値を設定
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-    /**
-     * ユーザーログインAPIを呼び出します。
-     * @param {Object} credentials - ユーザー名とパスワード
-     * @returns {Promise<Object>} 成功時: { access_token: string }, 失敗時: エラー
-     */
-    export const loginUser = async (credentials) => {
-      try {
-        // ★★★ ここを修正: フォームデータ形式に変換 ★★★
-        const formData = new URLSearchParams();
-        formData.append('username', credentials.username);
-        formData.append('password', credentials.password);
+// 2. リクエストインターセプター：全てのリクエストに自動でトークンを付与
+apiClient.interceptors.request.use(
+  (config) => {
+    // リクエストを送信する直前にストアからトークンを取得
+    const authStore = useAuthStore();
+    if (authStore.accessToken) {
+      config.headers['Authorization'] = `Bearer ${authStore.accessToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-        const response = await axios.post(`${API_BASE_URL}/auth/login`, formData, {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded', // ★★★ Content-Typeを変更 ★★★
-          },
-        });
-        return response.data; // access_tokenを含むデータを返す
-      } catch (error) {
-        console.error('API Service: Login failed', error.response || error);
-        // エラーメッセージの整形を改善
-        const errorMessage = error.response?.data?.detail 
-                             ? (Array.isArray(error.response.data.detail) 
-                                 ? error.response.data.detail.map(err => err.msg).join(', ') 
-                                 : error.response.data.detail)
-                             : 'ログインに失敗しました。';
-        throw new Error(errorMessage);
+// 3. レスポンスインターセプター：APIからの応答をグローバルに監視
+apiClient.interceptors.response.use(
+  // 成功レスポンスはそのまま返す
+  (response) => response,
+  // エラーレスポンスをここで一括処理
+  (error) => {
+    // レスポンスを受け取った後にストアを取得
+    const authStore = useAuthStore();
+
+    // 認証エラー（401 Unauthorized）の場合
+    if (error.response && error.response.status === 401) {
+      // ログインしている状態でのみログアウト処理を実行
+      if (authStore.isAuthenticated) {
+        console.error('APIから401エラー。トークンが無効または期限切れです。');
+        // Piniaストアのログアウトアクションを呼び出す
+        authStore.logout();
       }
-    };
-
-    /**
-     * ユーザー登録APIを呼び出します。
-     * @param {Object} details - ユーザー名とパスワード
-     * @returns {Promise<Object>} 成功時: 登録されたユーザー情報, 失敗時: エラー
-     */
-    export const registerUser = async (details) => {
-      try {
-        const response = await axios.post(`${API_BASE_URL}/auth/register`, {
-          username: details.username,
-          password: details.password,
-        }, {
-          headers: {
-            'Content-Type': 'application/json', // 登録は通常JSONなので変更しない
-          },
-        });
-        return response.data; // 登録成功時のデータを返す
-      } catch (error) {
-        console.error('API Service: Registration failed', error.response || error);
-        const errorMessage = error.response?.data?.detail 
-                             ? (Array.isArray(error.response.data.detail) 
-                                 ? error.response.data.detail.map(err => err.msg).join(', ') 
-                                 : error.response.data.detail)
-                             : '登録に失敗しました。';
-        throw new Error(errorMessage);
-      }
-    };
-
-    /**
-     * チャットメッセージ送信APIを呼び出します。
-     * @param {Object} chatData - メッセージとセッションID
-     * @param {string} chatData.message - ユーザーメッセージ
-     * @param {string} chatData.session_id - セッションID
-     * @param {string} accessToken - 認証用アクセストークン
-     * @returns {Promise<Object>} AIの応答
-     */
-    export const postChatMessage = async (chatData, accessToken) => {
-      try {
-        const response = await axios.post(`${API_BASE_URL}/chat`, chatData, {
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`, // 認証ヘッダーを追加
-          },
-        });
-        return response.data; // AIの応答を返す
-      } catch (error) {
-        console.error('API Service: Chat message failed', error.response || error);
-        const errorMessage = error.response?.data?.detail 
-                             ? (Array.isArray(error.response.data.detail) 
-                                 ? error.response.data.detail.map(err => err.msg).join(', ') 
-                                 : error.response.data.detail)
-                             : 'メッセージの送信に失敗しました。';
-        throw new Error(errorMessage);
-      }
-    };
+    }
     
-    /**
-     * 指定されたタスクIDのステータスを取得します。
-     * @param {string} taskId - 取得するタスクのID。
-     * @param {string} accessToken - 認証用アクセストークン。
-     * @returns {Promise<Object>} タスクのステータスと結果を含むレスポンス。
-     */
-    export const getTaskStatus = async (taskId, accessToken) => {
-      try {
-        // ★★★ ここを修正: URLを /chat/results/{taskId} に変更 ★★★
-        const response = await axios.get(`${API_BASE_URL}/chat/results/${taskId}`, {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-        return response.data;
-      } catch (error) {
-        console.error('API Service: Failed to get task status', error.response || error);
-        throw new Error(error.response?.data?.detail || 'タスクステータスの取得に失敗しました。');
-      }
-    };
+    // 他のエラーは呼び出し元で処理できるよう、そのままスローする
+    return Promise.reject(error);
+  }
+);
+
+export default apiClient;

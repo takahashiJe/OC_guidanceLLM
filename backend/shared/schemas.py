@@ -1,7 +1,7 @@
 # backend/shared/schemas.py
 
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
 # =======================================
 # トークン関連のスキーマ
@@ -83,3 +83,18 @@ class TaskResultResponse(BaseModel):
     ai_message: Optional[str] = None
     detail: Optional[str] = None # 失敗時の詳細情報
 
+class HistoryTurn(BaseModel):
+    """
+    会話履歴の1ターン分を表すスキーマ
+    """
+    human_message: str
+    ai_message: str
+
+    class Config:
+        orm_mode = True
+
+class LatestSessionResponse(BaseModel):
+    """
+    最新のセッションIDを返すためのスキーマ
+    """
+    session_id: Optional[str] = None

@@ -1,45 +1,48 @@
-<!-- App.vue -->
 <template>
-  <div class="min-h-screen bg-gray-100 flex flex-col">
-    <!-- router-view は現在のルートに対応するコンポーネントをレンダリングします -->
-    <router-view />
+  <div class="h-screen w-screen bg-white flex">
+    
+    <Sidebar class="hidden lg:flex" />
+
+    <main class="flex-1 flex flex-col h-full overflow-hidden">
+      
+      <div class="lg:hidden p-4 border-b shrink-0">
+        <h1 class="text-lg font-semibold">AI Chat</h1>
+      </div>
+      
+      <div class="flex-1 relative">
+        <RouterView class="absolute inset-0" />
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup>
-import { onMounted, watch } from 'vue'; // Vueのライフサイクルフックとリアクティブな監視機能をインポート
-import { useRouter } from 'vue-router'; // Vue Routerのルーターインスタンスを取得するためのフックをインポート
-import { useAuthStore } from './stores/auth'; // 認証状態を管理するPiniaストアをインポート (後で作成)
-import { useChatStore } from './stores/chat'; // チャットセッションを管理するPiniaストアをインポート (後で作成)
+import { onMounted } from 'vue';
+import { useAuthStore } from './stores/auth';
+import { useChatStore } from './stores/chat';
+import Sidebar from './components/Sidebar.vue';
+import { RouterView } from 'vue-router';
 
-// Piniaストアのインスタンスを取得
 const authStore = useAuthStore();
 const chatStore = useChatStore();
-const router = useRouter(); // Vue Routerのルーターインスタンスを取得
 
-// コンポーネントがマウントされた時に実行される処理
+// コンポーネントがマウントされたとき（＝アプリ起動時）に実行
 onMounted(() => {
-  console.log('App.vue mounted. Initializing authentication and chat session.');
-  authStore.initAuth(); // 認証状態を初期化（localStorageからトークンを読み込むなど）
-  chatStore.initSession(); // チャットセッションを初期化（localStorageからセッションIDを読み込むなど）
+  console.log('App.vue mounted. Initializing session and checking token.');
+  
+  // 能動的にトークンの有効性をチェック
+  authStore.checkTokenValidity();
+
+  // ログインしている場合のみチャットセッションを初期化
+  if (authStore.isAuthenticated) {
+    chatStore.initSession();
+  }
 });
 
-// authStore.isLoggedIn の変更を監視
-// ログイン状態に応じて適切なルートにリダイレクトします
-watch(() => authStore.isLoggedIn, (newVal) => {
-  if (newVal) {
-    // ログイン済みであれば、チャット画面にリダイレクト
-    console.log('User logged in. Redirecting to /chat');
-    router.push('/chat');
-  } else {
-    // ログアウト状態であれば、ログイン画面にリダイレクト
-    console.log('User logged out. Redirecting to /login');
-    router.push('/login');
-  }
-}, { immediate: true }); // コンポーネントマウント時にも即座にウォッチャーを実行
+// ★★★ ログイン状態を監視していたwatchブロックを削除 ★★★
+// ナビゲーションはrouter/index.jsのナビゲーションガードが担当するため不要
 </script>
 
 <style>
-/* Tailwind CSS を使用するため、ここでは基本的なスタイルのみ */
-/* main.css で Tailwind CSS をインポートします */
+/* main.cssでTailwind CSSをインポート */
 </style>

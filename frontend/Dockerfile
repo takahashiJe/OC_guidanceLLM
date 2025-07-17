@@ -12,7 +12,7 @@ COPY ./OC_guidanceLLM/package*.json ./
 
 # プロジェクトの依存関係をインストール
 # 開発依存も全てインストールする
-RUN npm install
+RUN npm install jwt-decode && npm install
 
 # アプリケーションのソースコードはボリュームマウントされるため、ここではコピーしない
 # COPY . .
