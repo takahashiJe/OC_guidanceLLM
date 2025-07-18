@@ -6,13 +6,23 @@ from typing import TypedDict, List, Optional
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph import StateGraph, END
+from langchain_core.pydantic_v1 import BaseModel, Field
 
 from . import tools
+
+class Intent(BaseModel):
+    """ユーザーの入力の意図を分類する。"""
+    intent: Literal["knowledge_question", "chitchat", "greeting"] = Field(
+        description="ユーザーの入力の意図。'knowledge_question'は情報検索が必要な質問、'chitchat'は雑談、'greeting'は挨拶。",
+        default="chitchat"
+    )
 
 # AgentStateに、RAGが取得したファイルのメタデータを保持するフィールドを追加
 class AgentState(TypedDict):
     user_input: str
     history_messages: List[BaseMessage]
+    intent: str
+    expanded_query: str  # ★ 新しく追加: 拡張された検索クエリ
     event_context: str
     knowledge_docs: List[str] # 必要に応じてGraphRAGからのテキスト情報もここにまとめる
     realtime_schedule_info: Optional[str]
@@ -30,88 +40,134 @@ def build_graph(graph_retriever, llm):
         print("---GRAPH[1]: 状況を判断中---")
         context = tools.get_event_context()
         return {"event_context": context}
+    
+    def classify_intent_node(state: AgentState):
+        """【ノード2】意図分類: ユーザーの入力が質問か雑談かを判断"""
+        print("---GRAPH[2]: ユーザーの意図を分類中---")
+        
+        prompt = f"""以下のユーザーの最後の発言を分析し、その意図を分類してください。
+        - 情報を求めている具体的な質問は 'knowledge_question'
+        - 単純な挨拶（こんにちは、など）は 'greeting'
+        - 上記以外（ありがとう、すごい、など）は 'chitchat'
+        
+        ユーザーの発言: "{state['user_input']}"
+        """
+        
+        # 構造化LLMを呼び出して意図を分類
+        response = structured_llm.invoke([("human", prompt)])
+        intent = response.intent
+        print(f"  - 分類結果: {intent}")
+        return {"intent": intent}
+
+    def query_expansion_node(state: AgentState):
+        """【ノード3-A】クエリー拡張: 履歴を元に検索クエリを生成 (RAGパス)"""
+        print("---GRAPH[3-A]: 検索クエリを拡張中---")
+        history_str = "\n".join([f"{msg.type}: {msg.content}" for msg in state["history_messages"]])
+        prompt = f"""以下の会話履歴と最後の質問を考慮して、ベクトルデータベースで関連情報を検索するための、自己完結した最適な検索クエリを生成してください。
+        検索クエリは、秋田県立大学のオープンキャンパスに関する情報を検索するものであるべきです。
+
+        【会話履歴】
+        {history_str}
+
+        【最後の質問】
+        {state['user_input']}
+
+        【生成する検索クエリ】"""
+        query_generation_messages = [
+            SystemMessage(content="あなたは、ユーザーの質問を解析し、ベクトル検索に最適なクエリを生成する優秀なアシスタントです。"),
+            ("human", prompt)
+        ]
+        response = llm.invoke(query_generation_messages)
+        expanded_query = response.content.strip()
+        print(f"  - 生成されたクエリ: {expanded_query}")
+        return {"expanded_query": expanded_query}
+    
+    def query_expansion_node(state: AgentState):
+        """【ノード2】クエリー拡張: 履歴を元に検索クエリを生成"""
+        print("---GRAPH[2]: 検索クエリを拡張中---")
+
+        history_str = "\n".join([f"{msg.type}: {msg.content}" for msg in state["history_messages"]])
+        
+        # LLMにクエリ生成を依頼する
+        prompt = f"""以下の会話履歴と最後の質問を考慮して、ベクトルデータベースで関連情報を検索するための、自己完結した最適な検索クエリを生成してください。
+        検索クエリは、秋田県立大学のオープンキャンパスに関する情報を検索するものであるべきです。
+
+        【会話履歴】
+        {history_str}
+
+        【最後の質問】
+        {state['user_input']}
+
+        【生成する検索クエリ】"""
+
+        query_generation_messages = [
+            SystemMessage(content="あなたは、ユーザーの質問を解析し、ベクトル検索に最適なクエリを生成する優秀なアシスタントです。"),
+            ("human", prompt)
+        ]
+        
+        response = llm.invoke(query_generation_messages)
+        expanded_query = response.content.strip()
+        
+        print(f"  - 生成されたクエリ: {expanded_query}")
+        return {"expanded_query": expanded_query}
 
     def retrieve_knowledge_node(state: AgentState):
-        """【ノード2】知識検索: ユーザーの質問と会話履歴からグラフ情報を検索する。"""
-        print("---GRAPH[2]: 知識を検索中 (グラフRAG)---")
-        contextual_question = "\n".join([msg.content for msg in state["history_messages"]]) + "\n" + state["user_input"]
+        """【ノード3】知識検索: 拡張されたクエリでベクトルDBを検索"""
+        print("---GRAPH[3]: 知識を検索中 (標準RAG)---")
+        
+        # 拡張されたクエリを使用
+        expanded_query = state["expanded_query"]
+        retrieved_docs = rag_retriever.invoke(expanded_query)
 
-        # ★ グラフリトリーバーを呼び出す
-        graph_info = graph_retriever(contextual_question) # get_graph_context を呼び出し
-
-        # knowledge_docs は空のままでも良いし、必要なら他の情報（例: 汎用情報）をここに入れる
-        return {"graph_context_info": graph_info, "knowledge_docs": []} # グラフ情報を状態にセット
+        # 取得したドキュメントの内容とメタデータをstateに保存
+        knowledge_docs = [doc.page_content for doc in retrieved_docs]
+        metadata_list = [doc.metadata for doc in retrieved_docs]
+        
+        print(f"  - {len(knowledge_docs)}件のドキュメントを取得しました。")
+        return {"knowledge_docs": knowledge_docs, "_retrieved_docs_metadata": metadata_list}
 
     def conditional_augmentation_node(state: AgentState):
-        """【ノード3】条件付き情報拡充: 現在はGraphRAGに集中するため、シンプル化または一時無効化を推奨"""
-        print(f"---GRAPH[3]: 条件付き情報拡充 (状況: {state['event_context']})---")
-        # GraphRAG実装中は、このノードのロジックは一旦シンプルにするか、
-        # `timetable_yamaguchi_lab.json`からの詳細情報をget_graph_contextで取得するようにします。
-        # 例外的なリアルタイム情報が必要な場合のみ有効に。
-        # 現状は、`get_graph_context`で全てまかなう想定なので、ここでは何もしないことも可能です。
-        return {"realtime_schedule_info": None} # または、既存のロジックを必要に応じて修正
+        """【ノード5-A】条件付き情報拡充 (RAGパス)"""
+        print(f"---GRAPH[5-A]: 条件付き情報拡充 (状況: {state['event_context']})---")
+        return {"realtime_schedule_info": None}
 
 
-    def generate_response_node(state: AgentState):
-        """【ノード4】応答生成"""
-        print("---GRAPH[4]: LLMで応答を生成中---")
-
-        # LLMに渡す参考情報を組み立てる (グラフ情報を優先)
+    def generate_rag_response_node(state: AgentState):
+        """【ノード6-A】応答生成 (RAGパス)"""
+        print("---GRAPH[6-A]: RAG応答を生成中---")
         reference_info_parts = []
-        if state.get("graph_context_info"):
-            # graph_context_info は既に '\n\n' で結合された formatted_info のリストになっている
-            # これをさらに箇条書きに整形し、各出展情報を明確にする
-            formatted_exhibits_list = []
-            indent_replacement = '\n'
-            for i, exhibit_info_str in enumerate(state["graph_context_info"].split('\n\n')):
-                if exhibit_info_str.strip(): # 空でないことを確認
-                    indented_exhibit_info = exhibit_info_str.replace('\n', indent_replacement)
-                    formatted_exhibits_list.append(f"  {i+1}. {indented_exhibit_info}") 
-
-            if formatted_exhibits_list:
-                reference_info_parts.append("【グラフ情報 - 山口研の出展一覧】:\n" + "\n".join(formatted_exhibits_list))
-            else:
-                # グラフ情報が空の場合の明確な記述
-                reference_info_parts.append("【グラフ情報 - 山口研の出展一覧】: （具体的な出展情報はグラフから見つかりませんでした。）")
-
-        # もしChromaDBのRAGも併用するなら、knowledge_docsもここに加える
-        # if state.get("knowledge_docs"):
-        #    reference_info_parts.extend(state["knowledge_docs"]) 
-
-        # realtime_schedule_info も必要に応じて追加
-        # if state.get("realtime_schedule_info"):
-        #    reference_info_parts.append(f"【リアルタイム情報】:\n{state['realtime_schedule_info']}")
+        if state.get("knowledge_docs"):
+            doc_strings = []
+            for i, (doc, meta) in enumerate(zip(state["knowledge_docs"], state["_retrieved_docs_metadata"])):
+                source = meta.get('source', '不明なソース')
+                doc_strings.append(f"[{i+1}] ソース: {os.path.basename(source)}\n内容: {doc}")
+            reference_info_parts.append("【参考情報】:\n" + "\n\n".join(doc_strings))
+        
+        if state.get("realtime_schedule_info"):
+            reference_info_parts.append(f"【リアルタイム情報】:\n{state['realtime_schedule_info']}")
 
         reference_info = "\n\n".join(reference_info_parts)
-
-        # ★ システムプロンプトをグラフ情報に特化して修正
         system_prompt = (
             "あなたは秋田県立大学オープンキャンパスの、親切で優秀なAIアシスタントです。\n"
             "提供された会話履歴と以下の【参考情報】を元に、ユーザーの質問に日本語で自然に回答してください。\n"
-            "\n"
-            "**【最重要ルール：厳守してください！】**\n"
-            "1.  **回答の根拠は必ず【グラフ情報 - 山口研の出展一覧】セクションの情報のみ**にしてください。\n"
-            "2.  **出展一覧に記載されていない内容は、絶対に回答に含めないでください。**\n"
-            "3.  **もし【グラフ情報 - 山口研の出展一覧】が「具体的な出展情報はグラフから見つかりませんでした。」と記載されている場合、**\n"
-            "    **必ず「申し訳ありませんが、山口研究室の具体的な出展情報は現在確認できません。」と回答してください。**\n"
-            "4.  **提供された出展一覧の全ての項目を、分かりやすい箇条書き形式で提示してください。**\n"
-            "5.  **イベント名、説明、担当、時間、場所の各項目を明確に示してください。**\n"
-            "6.  **「他の研究室や部門に関連する」というような、事実と異なる憶測は絶対にしないでください。**\n"
-            "7.  **会話履歴は、回答の文脈を理解するためにのみ使用し、回答内容に直接含めないでください。**\n"
-            "\n"
-            "【参考情報】:\n"
+            "**回答には、どの【参考情報】のどの部分を根拠にしたか、番号で `[1]` のように示してください。**\n"
+            "もし参考情報の中に回答の根拠となる情報が見つからない場合は、無理に回答を生成せず、「申し訳ありませんが、その質問に関する情報は現在持ち合わせておりません。」と正直に回答してください。\n\n"
             f"{reference_info}"
-            )
-
-        print("\n---DEBUG: Full System Prompt sent to LLM ---")
-        print(system_prompt)
-        print("---END DEBUG: Full System Prompt---")
-        
+        )
         messages = state["history_messages"] + [("human", state["user_input"])]
         prompt_messages = [("system", system_prompt)] + messages
-        
         response = llm.invoke(prompt_messages)
         return {"final_response": response.content}
+    
+    def handle_chitchat_node(state: AgentState):
+        """【ノード3-B】雑談応答 (雑談パス)"""
+        print("---GRAPH[3-B]: 雑談応答を生成中---")
+        intent = state.get("intent")
+        if intent == "greeting":
+            response = "こんにちは！秋田県立大学オープンキャンパスAIアシスタントです。何かお手伝いできることはありますか？"
+        else: # chitchat
+            response = "はい、ありがとうございます。他にご質問はありますか？"
+        return {"final_response": response}
 
     def final_touch_node(state: AgentState):
         """【ノード5】最終調整"""
@@ -124,19 +180,52 @@ def build_graph(graph_retriever, llm):
         
         return {"final_response": state["final_response"]}
 
-    # --- グラフの組み立てと配線 (変更なし) ---
+    # --- 条件分岐ロジック ---
+    def route_after_classification(state: AgentState):
+        """意図分類の結果に応じて、次のノードを決定する"""
+        intent = state.get("intent")
+        if intent == "knowledge_question":
+            return "query_expansion"
+        else: # greeting, chitchat
+            return "handle_chitchat"
+
+    # --- グラフの組み立てと配線 ---
     graph = StateGraph(AgentState)
+    
+    # ノードの追加
     graph.add_node("contextualizer", contextualizer_node)
+    graph.add_node("classify_intent", classify_intent_node)
+    graph.add_node("query_expansion", query_expansion_node)
     graph.add_node("retrieve_knowledge", retrieve_knowledge_node)
     graph.add_node("conditional_augmentation", conditional_augmentation_node)
-    graph.add_node("generate_response", generate_response_node)
+    graph.add_node("generate_rag_response", generate_rag_response_node)
+    graph.add_node("handle_chitchat", handle_chitchat_node)
     graph.add_node("final_touch", final_touch_node)
 
+    # パイプラインの配線
     graph.set_entry_point("contextualizer")
-    graph.add_edge("contextualizer", "retrieve_knowledge")
+    graph.add_edge("contextualizer", "classify_intent")
+
+    # ★★★ 意図分類後の条件分岐 ★★★
+    graph.add_conditional_edges(
+        "classify_intent",
+        route_after_classification,
+        {
+            "query_expansion": "query_expansion",
+            "handle_chitchat": "handle_chitchat"
+        }
+    )
+
+    # RAGパスの配線
+    graph.add_edge("query_expansion", "retrieve_knowledge")
     graph.add_edge("retrieve_knowledge", "conditional_augmentation")
-    graph.add_edge("conditional_augmentation", "generate_response")
-    graph.add_edge("generate_response", "final_touch")
+    graph.add_edge("conditional_augmentation", "generate_rag_response")
+    graph.add_edge("generate_rag_response", "final_touch")
+
+    # 雑談パスの配線
+    graph.add_edge("handle_chitchat", "final_touch")
+    
+    # 最終調整ノードから終了
     graph.add_edge("final_touch", END)
 
     return graph.compile()

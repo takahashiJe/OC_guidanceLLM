@@ -11,7 +11,6 @@ from shared.celery_app import celery_app
 from shared.db.session import SessionLocal
 from .services.memory_service import MemoryService
 from .graph.build import build_graph, AgentState
-from .rag.graph_retriever import get_graph_context
 
 # --- Worker起動時に一度だけ読み込む設定 ---
 llm = ChatOllama(
@@ -49,13 +48,13 @@ def run_chat_graph(user_id: int, session_id: str, user_input: str) -> str:
         memory_service = MemoryService(db_session=db, vectorstore_memory=vectorstore_memory)
         history_messages = memory_service.get_history(user_id=user_id, session_id=session_id)
         
-        app = build_graph(graph_retriever=get_graph_context, llm=llm) # build_graphにグラフリトリーバーを渡す
+        app = build_graph(rag_retriever=rag_retriever, llm=llm)
 
-        # ★ AgentStateの新しい定義に合わせて、initial_stateを修正
+        # AgentStateの初期化から graph_context_info を削除し、expanded_query を追加
         initial_state = AgentState(
             user_input=user_input,
             history_messages=history_messages,
-            # 他のフィールドはグラフ内で初期化・設定されるため、ここでデフォルト値を設定
+            expanded_query="", # 初期値は空文字列
             event_context="",
             knowledge_docs=[],
             realtime_schedule_info=None,
