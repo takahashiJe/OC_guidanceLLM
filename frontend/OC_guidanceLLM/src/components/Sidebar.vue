@@ -1,5 +1,12 @@
 <template>
-  <aside class="bg-[#f0f4f9] w-64 p-4 flex flex-col">
+  <aside class="bg-[#f0f4f9] w-full h-full p-4 flex flex-col">
+    <div class="flex justify-between items-center mb-4 lg:hidden">
+        <h2 class="font-bold">メニュー</h2>
+        <button @click="$emit('close')" class="p-2 rounded-full hover:bg-gray-200">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    </div>
+
     <button
       @click="startNewChat"
       class="flex items-center justify-between w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-full transition-colors duration-200"
@@ -22,9 +29,11 @@
 <script setup>
 import { useChatStore } from '../stores/chat';
 
+const emit = defineEmits(['close']);
 const chatStore = useChatStore();
 
 const startNewChat = () => {
   chatStore.startNewSession();
+  emit('close'); // 新しい会話を始めたらサイドバーを閉じる
 };
 </script>

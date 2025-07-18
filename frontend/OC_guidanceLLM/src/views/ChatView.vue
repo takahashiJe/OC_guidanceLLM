@@ -5,13 +5,13 @@
       <ChatMessages :messages="chatStore.messages" />
     </div>
 
-    <div v-if="chatStore.errorMessage" class="shrink-0 bg-red-100 border-t border-red-200 text-red-700 px-4 py-2 text-sm">
-      {{ chatStore.errorMessage }}
-    </div>
-
     <div class="shrink-0">
+      <div v-if="chatStore.errorMessage" class="bg-red-100 border-t border-red-200 text-red-700 px-4 py-2 text-sm">
+        {{ chatStore.errorMessage }}
+      </div>
       <ChatInput @sendMessage="handleSendMessage" :is-sending="chatStore.isLoading" />
     </div>
+
   </div>
 </template>
 

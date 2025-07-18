@@ -1,4 +1,3 @@
-// stores/chat.js
 import { defineStore } from 'pinia';
 import { v4 as uuidv4 } from 'uuid';
 import apiClient from '../services/api';
@@ -6,20 +5,51 @@ import apiClient from '../services/api';
 export const useChatStore = defineStore('chat', {
   state: () => ({
     messages: [],
-    sessionId: null,
-    isLoading: false, // 送信中と履歴読み込み中を兼ねる
+    sessionId: localStorage.getItem('sessionId'),
+    isLoading: false,
     errorMessage: null,
   }),
 
   actions: {
-    // addMessage, initSession, loadHistory, startNewSession アクションは変更なし
-    addMessage(message) {
-      this.messages.push(message);
+    async initSession() {
+      if (this.sessionId) {
+        await this.loadHistory();
+      }
     },
-    // ...
+
+    async loadHistory() {
+      if (!this.sessionId) return;
+      this.isLoading = true;
+      try {
+        const response = await apiClient.get(`/chat/history/${this.sessionId}`);
+        const loadedMessages = [];
+        response.data.forEach(turn => {
+          loadedMessages.push({ id: uuidv4(), sender: 'user', content: turn.human_message });
+          loadedMessages.push({ id: uuidv4(), sender: 'ai', content: turn.ai_message });
+        });
+        this.messages = loadedMessages;
+      } catch (error) {
+        console.error('[loadHistory] 履歴の読み込みに失敗しました:', error);
+        localStorage.removeItem('sessionId');
+        this.sessionId = null;
+        this.messages = [];
+        this.errorMessage = '過去の会話の読み込みに失敗しました。';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    startNewSession() {
+      const newSessionId = uuidv4();
+      this.messages = [];
+      this.sessionId = newSessionId;
+      this.isLoading = false;
+      this.errorMessage = null;
+      localStorage.setItem('sessionId', newSessionId);
+    },
 
     /**
-     * メッセージ送信アクションの修正
+     * ★★★ ここからが修正のポイント ★★★
      */
     async sendMessage(messageText) {
       if (this.isLoading || !messageText.trim()) return;
@@ -27,66 +57,79 @@ export const useChatStore = defineStore('chat', {
       if (!this.sessionId) {
         this.startNewSession();
       }
-
-      this.isLoading = true; // ★ ここで true になる
+      
+      this.isLoading = true;
       this.errorMessage = null;
+      
+      const userMessage = { id: uuidv4(), sender: 'user', content: messageText };
+      this.messages.push(userMessage);
 
-      const userMessage = { sender: 'user', content: messageText, id: uuidv4() };
-      this.addMessage(userMessage);
-
-      const aiPlaceholder = { sender: 'ai', content: 'AIが思考中...', id: uuidv4(), isPending: true };
-      this.addMessage(aiPlaceholder);
+      const aiPlaceholder = { id: uuidv4(), sender: 'ai', content: '', isPending: true };
+      this.messages.push(aiPlaceholder);
       
       try {
+        // 1. 最初のPOSTリクエストを送信
         const initialResponse = await apiClient.post('/chat', {
           message: messageText,
           session_id: this.sessionId,
         });
-        
         const { task_id } = initialResponse.data;
 
-        // ポーリング処理
-        const poll = async () => {
-          try {
-            const statusResponse = await apiClient.get(`/chat/results/${task_id}`);
-            const { status, ai_message, detail } = statusResponse.data;
-
-            if (status === 'SUCCESS') {
-              this.updatePendingMessage(aiPlaceholder.id, ai_message);
-              this.isLoading = false; // ★ 成功時に false に戻す
-            } else if (status === 'FAILURE') {
-              const errorDetail = detail || '不明なエラーが発生しました。';
-              this.updatePendingMessage(aiPlaceholder.id, `エラー: ${errorDetail}`);
-              this.errorMessage = errorDetail;
-              this.isLoading = false; // ★ 失敗時にも false に戻す
-            } else {
-              // PENDINGの場合は1秒後に再試行
-              setTimeout(poll, 1000);
-            }
-          } catch(pollError) {
-             console.error("ポーリング中にエラーが発生しました:", pollError);
-             this.errorMessage = "AIからの応答取得に失敗しました。";
-             this.isLoading = false; // ★ ポーリング自体のエラーでも false に戻す
-          }
-        };
-        // 最初のポーリングを開始
-        setTimeout(poll, 1000);
+        // 2. 受け取ったtask_idを使ってポーリングを開始
+        this.pollForResult(task_id, aiPlaceholder.id);
 
       } catch (error) {
-        // 最初のPOSTリクエストが失敗した場合のエラーハンドリング
-        const errorDetail = error.response?.data?.detail || error.message || 'メッセージの送信に失敗しました。';
-        this.updatePendingMessage(aiPlaceholder.id, `エラー: ${errorDetail}`);
-        this.errorMessage = errorDetail;
-        this.isLoading = false; // ★ ここでも false に戻す
+        // 3. 最初のPOSTリクエストが失敗した場合のエラー処理
+        this.handleSendError(error, aiPlaceholder.id);
       }
     },
-    
-    updatePendingMessage(id, newContent) {
-        const message = this.messages.find(m => m.id === id);
-        if (message) {
-            message.content = newContent;
-            message.isPending = false;
+
+    /**
+     * AIの応答をポーリングするアクション
+     */
+    pollForResult(taskId, placeholderId) {
+      const interval = setInterval(async () => {
+        try {
+          const statusResponse = await apiClient.get(`/chat/results/${taskId}`);
+          const { status, ai_message } = statusResponse.data;
+
+          if (status === 'SUCCESS' || status === 'FAILURE') {
+            clearInterval(interval); // ポーリングを停止
+            this.isLoading = false;   // ローディング状態を解除
+            
+            const finalMessage = status === 'SUCCESS' ? ai_message : 'エラー: 応答の生成に失敗しました。';
+            
+            // プレースホルダーのメッセージを最終的な応答に更新
+            const message = this.messages.find(m => m.id === placeholderId);
+            if (message) {
+              message.content = finalMessage;
+              message.isPending = false;
+            }
+          }
+          // statusが'PENDING'の場合は何もしない（次のインターバルで再試行）
+
+        } catch (error) {
+          clearInterval(interval); // エラー発生時もポーリングを停止
+          this.handleSendError(error, placeholderId);
         }
+      }, 2000); // 2秒間隔でポーリング
     },
+
+    /**
+     * 送信エラーを処理するための共通アクション
+     */
+    handleSendError(error, placeholderId) {
+      const errorDetail = error.response?.data?.detail || error.message || 'メッセージの送信中にエラーが発生しました。';
+      
+      // プレースホルダーをエラーメッセージに更新
+      const message = this.messages.find(m => m.id === placeholderId);
+      if (message) {
+        message.content = `エラー: ${errorDetail}`;
+        message.isPending = false;
+      }
+      
+      this.errorMessage = errorDetail;
+      this.isLoading = false;
+    }
   },
 });
