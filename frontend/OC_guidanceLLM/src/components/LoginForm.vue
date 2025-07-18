@@ -3,7 +3,7 @@
     <div class="relative">
       <input
         type="text"
-        id="username"
+        id="login-username"
         v-model="username"
         placeholder="ユーザー名"
         :disabled="isLoading"
@@ -15,7 +15,7 @@
     <div class="relative">
       <input
         type="password"
-        id="password"
+        id="login-password"
         v-model="password"
         placeholder="パスワード"
         :disabled="isLoading"

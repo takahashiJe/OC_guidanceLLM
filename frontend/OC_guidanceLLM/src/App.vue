@@ -14,7 +14,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <h1 class="text-lg font-semibold text-gray-700">APU-Compass</h1>
+        <h1 class="text-lg font-semibold text-gray-700">APU-NaviAI</h1>
         <img src="@/assets/app-icon.png" alt="App Icon" class="w-8 h-8 rounded-full">
       </header>
 
