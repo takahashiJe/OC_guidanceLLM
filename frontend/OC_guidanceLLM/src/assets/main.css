@@ -2,3 +2,55 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* コンテナを一定速度で回転させるキーフレーム */
+@keyframes gemini_spinner_rotate {
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 円弧の長さと開始位置を同時に変化させる、シームレスなキーフレーム */
+@keyframes gemini_spinner_arc_dash {
+  0% {
+    stroke-dasharray: 1, 68;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 50, 68;
+    stroke-dashoffset: -25;
+  }
+  100% {
+    stroke-dasharray: 1, 68;
+    stroke-dashoffset: -68;
+  }
+}
+
+/* ★ ここからが修正箇所 ★ */
+/* アイコンを一定時間ごとにクルンと回転させるためのキーフレーム */
+@keyframes icon_kurun_rotate {
+  /* アニメーション全体の90%の時間は静止 */
+  0%, 90% {
+    transform: rotate(0deg);
+  }
+  /* 残りの10%の時間で1回転する */
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 作成したアニメーションを適用するためのクラス */
+.animate-gemini-spinner-container {
+  animation: gemini_spinner_rotate 2s linear infinite;
+}
+
+.animate-gemini-spinner-arc {
+  animation: gemini_spinner_arc_dash 1.5s ease-in-out infinite;
+}
+
+/* 新しいアニメーションルールを適用 */
+.animate-icon-rotate {
+  /* 4秒かけてアニメーションを1回再生し、それを無限に繰り返す */
+  animation: icon_kurun_rotate 4s ease-in-out infinite;
+}
+/* ★ ここまでが修正箇所 ★ */

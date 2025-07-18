@@ -1,11 +1,11 @@
 <template>
-  <div class="p-4 space-y-4">
+  <div class="p-4 space-y-6">
     <ChatMessage
       v-for="message in messages"
       :key="message.id"
       v-bind="message"
     />
-    
+
     <div ref="messagesEndRef" />
   </div>
 </template>

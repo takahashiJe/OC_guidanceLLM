@@ -31,9 +31,19 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue'; // ★ onMounted をインポート
 import Sidebar from './components/Sidebar.vue';
 import { RouterView } from 'vue-router';
+import { useChatStore } from './stores/chat'; // ★ chatストアをインポート
 
 const isSidebarOpen = ref(false);
+const chatStore = useChatStore(); // ★ chatストアのインスタンスを取得
+
+/**
+ * 要件: アプリケーションがマウントされた直後に実行されるライフサイクルフック
+ * ここで履歴復元のプロセスを開始する
+ */
+onMounted(() => {
+  chatStore.initSession();
+});
 </script>
