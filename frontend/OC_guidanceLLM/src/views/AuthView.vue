@@ -3,8 +3,8 @@
     
     <main class="flex-1 flex flex-col justify-center items-center p-6 sm:p-8">
       <div class="w-full max-w-md text-center">
-        <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">
-          {{ displayedTitle }}
+        <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 h-24">
+          <span class="whitespace-pre-wrap">{{ displayedTitle }}</span>
           <span class="blinking-cursor"></span>
         </h1>
       </div>
@@ -42,20 +42,54 @@ import RegistrationForm from '../components/RegistrationForm.vue';
 const authStore = useAuthStore();
 const isRegisterMode = ref(false);
 
-const fullTitle = '発明しましょう';
+// ★★★ ここからアニメーション用のコード ★★★
+
+// 1. 表示させたいフレーズの配列
+const phrases = [
+  'APU-NaviAI',
+  '本荘キャンパスへようこそ。',
+  'オープンキャンパスを楽しもう！'
+];
 const displayedTitle = ref('');
+const phraseIndex = ref(0);
+const charIndex = ref(0);
+const isDeleting = ref(false);
+
+const typeEffect = () => {
+  const currentPhrase = phrases[phraseIndex.value];
+  let typingSpeed = isDeleting.value ? 75 : 150; // 削除時は少し速く
+
+  if (isDeleting.value) {
+    // 文字を削除
+    displayedTitle.value = currentPhrase.substring(0, charIndex.value - 1);
+    charIndex.value--;
+  } else {
+    // 文字を追加
+    displayedTitle.value = currentPhrase.substring(0, charIndex.value + 1);
+    charIndex.value++;
+  }
+
+  // フレーズの最後までタイピングしたら、削除モードに切り替え
+  if (!isDeleting.value && charIndex.value === currentPhrase.length) {
+    typingSpeed = 2000; // フレーズ表示後の待機時間
+    isDeleting.value = true;
+  } 
+  // フレーズを全て削除したら、次のフレーズへ
+  else if (isDeleting.value && charIndex.value === 0) {
+    isDeleting.value = false;
+    phraseIndex.value = (phraseIndex.value + 1) % phrases.length;
+    typingSpeed = 500; // 次のフレーズまでの待機時間
+  }
+  
+  setTimeout(typeEffect, typingSpeed);
+};
 
 onMounted(() => {
-  let index = 0;
-  const interval = setInterval(() => {
-    if (index < fullTitle.length) {
-      displayedTitle.value += fullTitle[index];
-      index++;
-    } else {
-      clearInterval(interval);
-    }
-  }, 150);
+  typeEffect();
 });
+
+// ★★★ ここまでアニメーション用のコード ★★★
+
 
 const handleLogin = async (credentials) => {
   await authStore.login(credentials);
@@ -75,17 +109,20 @@ const toggleMode = () => {
 <style scoped>
 .blinking-cursor {
   display: inline-block;
-  width: 1.25rem;
-  height: 2.5rem;
+  width: 4px;
+  height: 2.5rem; /* h1のフォントサイズに合わせる */
   background-color: #1f2937;
-  margin-left: 0.5rem;
-  border-radius: 9999px;
-  animation: blink 1.2s infinite;
-  vertical-align: middle;
+  margin-left: 8px;
+  animation: blink 1s step-end infinite;
+  vertical-align: bottom;
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  from, to {
+    background-color: transparent;
+  }
+  50% {
+    background-color: #1f2937;
+  }
 }
 </style>
