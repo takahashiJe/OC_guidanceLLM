@@ -16,6 +16,7 @@
 </template>
 
 <script setup>
+import { onMounted } from 'vue'; // ★ onMounted をインポート
 import { useChatStore } from '../stores/chat';
 import ChatMessages from '../components/ChatMessages.vue';
 import ChatInput from '../components/ChatInput.vue';
@@ -25,4 +26,13 @@ const chatStore = useChatStore();
 const handleSendMessage = async (messageText) => {
   await chatStore.sendMessage(messageText);
 };
+
+// ★ このコンポーネントがマウントされた時にセッションを初期化する
+onMounted(() => {
+  // メッセージが空の場合のみ履歴の読み込みを試みる
+  // これにより、他の画面から戻ってきた際に不要な再読み込みを防ぐ
+  if (chatStore.messages.length === 0) {
+    chatStore.initSession();
+  }
+});
 </script>

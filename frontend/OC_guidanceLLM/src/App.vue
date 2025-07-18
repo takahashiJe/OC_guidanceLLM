@@ -21,29 +21,48 @@
       <RouterView />
     </main>
     
-    <div v-if="isSidebarOpen" class="fixed inset-0 z-40">
-      <div @click="isSidebarOpen = false" class="absolute inset-0 bg-black opacity-50"></div>
-      <div class="relative w-3/4 max-w-sm h-full bg-[#f0f4f9] shadow-xl">
+    <transition name="fade">
+      <div 
+        v-if="isSidebarOpen" 
+        @click="isSidebarOpen = false" 
+        class="fixed inset-0 bg-black bg-opacity-50 z-40"
+      ></div>
+    </transition>
+
+    <transition name="slide-left">
+      <div v-if="isSidebarOpen" class="fixed top-0 left-0 w-3/4 max-w-sm h-full bg-[#f0f4f9] shadow-xl z-50">
         <Sidebar @close="isSidebarOpen = false" />
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'; // ★ onMounted をインポート
+import { ref } from 'vue';
 import Sidebar from './components/Sidebar.vue';
 import { RouterView } from 'vue-router';
-import { useChatStore } from './stores/chat'; // ★ chatストアをインポート
 
 const isSidebarOpen = ref(false);
-const chatStore = useChatStore(); // ★ chatストアのインスタンスを取得
-
-/**
- * 要件: アプリケーションがマウントされた直後に実行されるライフサイクルフック
- * ここで履歴復元のプロセスを開始する
- */
-onMounted(() => {
-  chatStore.initSession();
-});
 </script>
+
+<style scoped>
+/* 背景のフェードイン・フェードアウト */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* サイドバーのスライドイン・スライドアウト */
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: transform 0.3s ease-in-out;
+}
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-100%);
+}
+</style>

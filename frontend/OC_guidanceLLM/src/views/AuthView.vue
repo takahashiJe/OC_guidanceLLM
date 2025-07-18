@@ -1,79 +1,91 @@
-<!-- views/AuthView.vue -->
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-indigo-600 p-4 sm:p-6">
-    <div class="w-full max-w-md bg-white rounded-xl shadow-2xl p-6 sm:p-8 space-y-6">
-      <h1 class="text-3xl sm:text-4xl font-extrabold text-center text-gray-800 mb-6">
-        AIアシスタントへようこそ
-      </h1>
+  <div class="flex flex-col h-screen bg-white overflow-hidden">
+    
+    <main class="flex-1 flex flex-col justify-center items-center p-6 sm:p-8">
+      <div class="w-full max-w-md text-center">
+        <h1 class="text-4xl sm:text-5xl font-bold text-gray-900">
+          {{ displayedTitle }}
+          <span class="blinking-cursor"></span>
+        </h1>
+      </div>
+    </main>
 
-      <!-- 認証フォームのコンテナ -->
-      <div class="space-y-4">
-        <!-- エラーメッセージ表示 -->
-        <div v-if="authStore.errorMessage" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-md text-sm text-center" role="alert">
-          {{ authStore.errorMessage }}
+    <footer class="w-full bg-black rounded-t-3xl p-6 sm:p-8 shrink-0">
+      <div class="w-full max-w-md mx-auto space-y-4">
+        <div v-if="authStore.errorMessage" class="bg-red-900/50 border border-red-500/50 text-red-300 p-4 rounded-xl text-sm" role="alert">
+          <p>{{ authStore.errorMessage }}</p>
         </div>
-
-        <!-- ログインフォームまたは登録フォームを表示 -->
+        
         <LoginForm v-if="!isRegisterMode" @submit="handleLogin" :is-loading="authStore.isLoading" />
         <RegistrationForm v-else @submit="handleRegister" :is-loading="authStore.isLoading" />
-      </div>
 
-      <!-- フォーム切り替えボタン -->
-      <div class="text-center mt-6">
         <button
           @click="toggleMode"
           :disabled="authStore.isLoading"
-          class="text-blue-600 hover:text-blue-800 font-semibold transition-colors duration-200 text-sm sm:text-base"
+          class="w-full flex justify-center py-3.5 px-4 rounded-xl text-base font-semibold transition-colors duration-300
+                 bg-zinc-800 text-white
+                 hover:bg-zinc-700"
         >
-          {{ isRegisterMode ? 'アカウントをお持ちの方はこちら (ログイン)' : 'アカウントをお持ちでない方はこちら (新規登録)' }}
+          {{ isRegisterMode ? 'ログインはこちら' : '新規登録' }}
         </button>
       </div>
-    </div>
+    </footer>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'; // リアクティブな状態を管理するためのrefをインポート
-import { useAuthStore } from '../stores/auth'; // 認証ストアをインポート
-import LoginForm from '../components/LoginForm.vue'; // ログインフォームコンポーネントをインポート (後で実装)
-import RegistrationForm from '../components/RegistrationForm.vue'; // 登録フォームコンポーネントをインポート (後で実装)
+import { ref, onMounted } from 'vue';
+import { useAuthStore } from '../stores/auth';
+import LoginForm from '../components/LoginForm.vue';
+import RegistrationForm from '../components/RegistrationForm.vue';
 
-// Piniaストアのインスタンスを取得
 const authStore = useAuthStore();
-
-// ログインモードと登録モードを切り替えるためのリアクティブな状態
 const isRegisterMode = ref(false);
 
-/**
- * ログインフォームからの送信イベントを処理します。
- * @param {Object} credentials - ユーザーの認証情報
- */
+const fullTitle = '発明しましょう';
+const displayedTitle = ref('');
+
+onMounted(() => {
+  let index = 0;
+  const interval = setInterval(() => {
+    if (index < fullTitle.length) {
+      displayedTitle.value += fullTitle[index];
+      index++;
+    } else {
+      clearInterval(interval);
+    }
+  }, 150);
+});
+
 const handleLogin = async (credentials) => {
-  console.log('AuthView: Handling login submit.');
   await authStore.login(credentials);
-  // ログイン後のリダイレクトはApp.vueのウォッチャーが処理します
 };
-
-/**
- * 登録フォームからの送信イベントを処理します。
- * @param {Object} details - ユーザーの登録情報
- */
 const handleRegister = async (details) => {
-  console.log('AuthView: Handling register submit.');
   await authStore.register(details);
-  // 登録後のリダイレクトはApp.vueのウォッチャーが処理します
+  if (!authStore.errorMessage) {
+    isRegisterMode.value = false;
+  }
 };
-
-/**
- * ログイン/登録フォームの表示モードを切り替えます。
- */
 const toggleMode = () => {
   isRegisterMode.value = !isRegisterMode.value;
-  authStore.errorMessage = null; // モード切り替え時にエラーメッセージをクリア
-  console.log('AuthView: Toggling form mode to register:', isRegisterMode.value);
+  authStore.errorMessage = null;
 };
 </script>
 
 <style scoped>
-/* Scoped styles for AuthView.vue if needed, but Tailwind handles most */
+.blinking-cursor {
+  display: inline-block;
+  width: 1.25rem;
+  height: 2.5rem;
+  background-color: #1f2937;
+  margin-left: 0.5rem;
+  border-radius: 9999px;
+  animation: blink 1.2s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
 </style>
