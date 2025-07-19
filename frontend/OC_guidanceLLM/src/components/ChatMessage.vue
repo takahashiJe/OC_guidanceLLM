@@ -31,7 +31,7 @@
             </circle>
             </svg>
           <div class="absolute inset-0 flex items-center justify-center">
-            <img src="@/assets/app-icon.png" alt="App Icon" class="w-5 h-5 rounded-full animate-icon-rotate" style="transform-origin: 50% 50%;">
+            <img src="/app-icon.png" alt="App Icon" class="w-5 h-5 rounded-full animate-icon-rotate" style="transform-origin: 50% 50%;">
           </div>
         </div>
         <p class="text-base text-gray-600">お待ちください...</p>
@@ -39,7 +39,7 @@
 
       <div v-else>
         <div class="w-8 h-8 flex items-center justify-start shrink-0">
-          <img src="@/assets/app-icon.png" alt="App Icon" class="w-6 h-6 rounded-full">
+          <img src="/app-icon.png" alt="App Icon" class="w-6 h-6 rounded-full">
         </div>
         <div class="pt-2">
           <p class="text-base text-gray-800 leading-relaxed whitespace-pre-wrap">

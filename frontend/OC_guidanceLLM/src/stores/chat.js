@@ -90,7 +90,16 @@ export const useChatStore = defineStore('chat', {
         this.pollForResult(task_id, aiPlaceholder.id);
 
       } catch (error) {
-        this.handleSendError(error, aiPlaceholder.id);
+        console.error('Error sending message:', error);
+        this.addMessage({
+          sender: 'system',
+          content: 'メッセージの送信中にエラーが発生しました。',
+        });
+        // ★ エラーを再スローしてインターセプターに処理を渡す
+        throw error; 
+      } finally {
+        this.isSending = false;
+        this.currentTaskId = null;
       }
     },
 

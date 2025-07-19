@@ -13,10 +13,10 @@
           </svg>
         </button>
         <h1 class="text-lg font-semibold text-gray-700">APU-NaviAI</h1>
-        <img src="@/assets/app-icon.png" alt="App Icon" class="w-8 h-8 rounded-full">
+        <img src="/app-icon.png" alt="App Icon" class="w-8 h-8 rounded-full">
       </header>
 
-      <main class="flex-1 overflow-y-auto">
+      <main class="flex-1" :class="{ 'overflow-y-auto': !isAuthRoute }">
         <RouterView />
       </main>
     </div>

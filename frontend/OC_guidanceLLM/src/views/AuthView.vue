@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col h-screen bg-noise overflow-hidden">
+  <div class="flex flex-col h-full bg-noise overflow-hidden">
     
     <main class="flex-1 flex flex-col justify-center items-center p-6 sm:p-8">
       <div class="w-full max-w-md text-center">
