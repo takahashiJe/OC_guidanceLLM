@@ -14,16 +14,12 @@ from .graph.build import build_graph, AgentState
 
 # --- Worker起動時に一度だけ読み込む設定 ---
 llm = ChatOllama(
-    model="qwen2.5:32b-instruct", 
-    # model="gemma3:27b-it-qat",
-    # model="gemma3:27b",
-    # model="llama3:70b",
-    # model="elyza-jp-chat",
+    model="qwen2.5:32b-instruct",
     base_url="http://ollama:11434", temperature=0.0)
 
 EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
-CHROMA_KNOWLEDGE_PATH = "/app/data/vectorstore_knowledge"
-CHROMA_MEMORY_PATH = "/app/data/vectorstore_memory"
+CHROMA_KNOWLEDGE_PATH = "/app/worker/data/vectorstore_knowledge"
+CHROMA_MEMORY_PATH = "/app/worker/data/vectorstore_memory"
 vectorstore_knowledge = Chroma(persist_directory=CHROMA_KNOWLEDGE_PATH, embedding_function=EMBEDDINGS)
 rag_retriever = vectorstore_knowledge.as_retriever(search_kwargs={"k": 5})
 vectorstore_memory = Chroma(persist_directory=CHROMA_MEMORY_PATH, embedding_function=EMBEDDINGS)
@@ -48,13 +44,15 @@ def run_chat_graph(user_id: int, session_id: str, user_input: str) -> str:
         memory_service = MemoryService(db_session=db, vectorstore_memory=vectorstore_memory)
         history_messages = memory_service.get_history(user_id=user_id, session_id=session_id)
         
+        # build_graphに標準RAGのretrieverを渡す
         app = build_graph(rag_retriever=rag_retriever, llm=llm)
 
-        # AgentStateの初期化から graph_context_info を削除し、expanded_query を追加
+        # AgentStateの初期化
         initial_state = AgentState(
             user_input=user_input,
             history_messages=history_messages,
-            expanded_query="", # 初期値は空文字列
+            intent="",
+            expanded_queries=[],
             event_context="",
             knowledge_docs=[],
             realtime_schedule_info=None,

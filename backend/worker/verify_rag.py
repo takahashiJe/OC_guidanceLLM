@@ -12,7 +12,7 @@ print("--- RAG診断スクリプトを開始します ---")
 # --- 設定 ---
 # tasks.pyと同じ設定を使用
 EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
-CHROMA_KNOWLEDGE_PATH = "backend/worker/data/vectorstore_knowledge"
+CHROMA_KNOWLEDGE_PATH = "/app/worker/data/vectorstore_knowledge"
 TEST_QUERY = "サイバーフィジカルシステム研究室（山口研）のオープンキャンパス出展内容を教えてください"
 
 try:
