@@ -1,0 +1,28 @@
+# backend/api_gateway/Dockerfile.prod (修正版)
+
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# PYTHONPATHを設定することで、/app を起点にモジュールを検索する
+ENV PYTHONPATH /app
+
+WORKDIR /app
+
+# api_gateway用のrequirements.txtをコピーして依存関係をインストール
+COPY ./backend/api_gateway/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# 必要なソースコードとスクリプトをすべてコピー
+COPY ./backend /app/backend
+COPY ./script /app/script
+COPY ./backend/entrypoint.sh /app/entrypoint.sh
+
+RUN chmod +x /app/entrypoint.sh
+
+# エントリポイントを指定
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# メインのアプリケーションを起動
+# PYTHONPATHが/appに設定されているため、backend.api_gateway.app.mainとして認識される
+CMD ["uvicorn", "backend.api_gateway.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

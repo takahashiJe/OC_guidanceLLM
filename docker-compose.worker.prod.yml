@@ -1,0 +1,48 @@
+# docker-compose.worker.prod.yml
+# For worker servers (nubia, gouin, ranco)
+
+services:
+  # --- Worker ---
+  worker:
+    build:
+      context: .
+      dockerfile: ./backend/worker/Dockerfile.prod
+    # 起動コマンドで --env-file .env.worker を指定するため、ここではコメントアウト
+    # env_file: .env.worker
+    volumes:
+      # ベクトルストアのデータは永続化する
+      - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
+      - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
+    depends_on:
+      ollama:
+        condition: service_started
+    # GPUリソースをコンテナに割り当てる
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+
+  # --- Ollama ---
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # GPUリソースをコンテナに割り当てる
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: always
+
+# 名前付きボリュームの定義
+volumes:
+  ollama_data:
