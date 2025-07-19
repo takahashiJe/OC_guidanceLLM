@@ -2,24 +2,26 @@
 
 import json
 import os
-from datetime import datetime
+from datetime import datetime, time, timedelta
 from typing import List, Dict, Any
+
 
 # スクリプト自身の絶対パスを取得し、それを基準にknowledgeディレクトリへのパスを構築
 _current_file_path = os.path.abspath(__file__)
 _graph_dir = os.path.dirname(_current_file_path)
 _app_dir = os.path.dirname(_graph_dir)
 _worker_root = os.path.dirname(_app_dir)
-KNOWLEDGE_BASE_PATH = os.path.join(_worker_root, "data", "knowledge")
+KNOWLEDGE_BASE_DIR = "backend/worker/data/knowledge"
 
 
 def get_event_context() -> str:
     """
     イベントの開催日を基準に、現在の状況を判断します。
     """
+
     try:
         # 修正点: "00_イベント概要" ディレクトリをパスから削除
-        config_path = os.path.join(KNOWLEDGE_BASE_PATH, "event_config.json")
+        config_path = os.path.join(KNOWLEDGE_BASE_DIR, "event_config.json")
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
         event_date_str = config["eventDate"]
@@ -37,45 +39,70 @@ def get_event_context() -> str:
     else:
         return "AFTER_EVENT"
 
-def get_current_schedule_info(timetable_path: str) -> str:
+def get_current_schedule_info(context_topic: str) -> str | None:
     """
-    指定されたタイムテーブルファイルのパスを元に、現在と次のイベント情報を生成します。
+    現在の時刻とユーザーの質問の文脈（トピック）に基づいて、
+    関連するタイムテーブルJSONからリアルタイムのイベント情報を生成する。
     """
+    print(f"---TOOL[get_current_schedule_info]: リアルタイム情報を検索中 (トピック: {context_topic})---")
+    
+    # 1. 文脈に応じて参照するJSONファイルを決定
+    if "山口研" in context_topic or "サイバーフィジカル" in context_topic:
+        json_path = os.path.join(KNOWLEDGE_BASE_DIR, "03_学部学科/システム科学技術学部/05_経営システム工学科/研究室/サイバーフィジカルシステム研究室_山口研/timetable_yamaguchi_lab.json")
+    elif "経営システム工学科" in context_topic:
+        json_path = os.path.join(KNOWLEDGE_BASE_DIR, "03_学部学科/システム科学技術学部/05_経営システム工学科/timetable_keiei_system.json")
+    else: # デフォルトはオープンキャンパス全体
+        json_path = os.path.join(KNOWLEDGE_BASE_DIR, "00_イベント概要/timetable_main_event.json")
+
+    if not os.path.exists(json_path):
+        print(f"  - タイムテーブルファイルが見つかりません: {json_path}")
+        return None
+
+    # 2. JSONファイルを読み込み、現在の時刻を取得
     try:
-        with open(timetable_path, "r", encoding="utf-8") as f:
+        with open(json_path, 'r', encoding='utf-8') as f:
             schedule = json.load(f)
-    except FileNotFoundError:
-        return "" 
+    except (json.JSONDecodeError, FileNotFoundError):
+        print(f"  - タイムテーブルファイルの読み込みに失敗: {json_path}")
+        return None
 
     now = datetime.now().time()
-    current_event = None
-    next_event = None
+    
+    # 3. 現在開催中・次のイベントを探す
+    ongoing_events = []
+    next_events = []
+    
+    for event in schedule:
+        try:
+            start_time = time.fromisoformat(event["start_time"])
+            end_time = time.fromisoformat(event["end_time"])
 
-    for event in sorted(schedule, key=lambda x: x["start_time"]):
-        start_time = datetime.strptime(event["start_time"], "%H:%M").time()
-        end_time = datetime.strptime(event["end_time"], "%H:%M").time()
+            if start_time <= now <= end_time:
+                ongoing_events.append(f"「{event['event_name']}」（〜{event['end_time']} @ {event['location']}）")
+            elif now < start_time:
+                next_events.append((start_time, f"「{event['event_name']}」（{event['start_time']}〜 @ {event['location']}）"))
+        except (ValueError, KeyError):
+            continue # 時刻フォーマットが不正なデータはスキップ
 
-        if start_time <= now < end_time:
-            current_event = event
+    # 4. 状況に応じたメッセージを生成
+    message_parts = []
+    if ongoing_events:
+        message_parts.append(f"現在、{' と '.join(ongoing_events)} が開催中です。")
+
+    # 次のイベントを時間順にソートして、直近のものだけ表示
+    if next_events:
+        next_events.sort()
+        # 1時間以内に始まるイベントをリストアップ
+        upcoming_events_str = [evt_str for t, evt_str in next_events if t <= (datetime.combine(datetime.today(), now) + timedelta(hours=1)).time()]
+        if upcoming_events_str:
+            message_parts.append(f"まもなく、{'、'.join(upcoming_events_str)} が始まります。")
+
+    if not message_parts:
+        return "現在開催中、またはまもなく開始される予定の関連イベントはありません。"
         
-        if start_time > now and next_event is None:
-            next_event = event
-            if current_event:
-                break
-    
-    response_parts = []
-    if current_event:
-        presenters = ', '.join(current_event.get('presenters', []))
-        response_parts.append(f"現在、{current_event.get('description', 'イベント')}（担当: {presenters}）が行われています。")
-    
-    if next_event:
-        next_event_desc = f"次は{next_event['start_time']}から、{next_event.get('description', '次のイベント')}が予定されています。"
-        response_parts.append(next_event_desc)
-    
-    if not current_event and not next_event:
-        return "本日のタイムテーブルに記載されたイベントはすべて終了しました。"
-
-    return " ".join(response_parts)
+    final_message = "\n".join(message_parts)
+    print(f"  - 生成されたリアルタイム情報: {final_message}")
+    return final_message
 
 
 def get_days_until_event_message() -> str:
@@ -84,7 +111,7 @@ def get_days_until_event_message() -> str:
     """
     try:
         # 修正点: "00_イベント概要" ディレクトリをパスから削除
-        config_path = os.path.join(KNOWLEDGE_BASE_PATH, "event_config.json")
+        config_path = os.path.join(KNOWLEDGE_BASE_DIR, "event_config.json")
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
         event_date_str = config["eventDate"]

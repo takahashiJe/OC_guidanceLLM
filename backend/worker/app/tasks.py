@@ -15,13 +15,18 @@ from .graph.build import build_graph, AgentState
 # --- Worker起動時に一度だけ読み込む設定 ---
 llm = ChatOllama(
     model="qwen2.5:32b-instruct",
+    # model="deepseek-r1:671b",
+    # model="deepseek-r1:70b",
     base_url="http://ollama:11434", temperature=0.0)
 
 EMBEDDINGS = OllamaEmbeddings(model="mxbai-embed-large", base_url="http://ollama:11434")
 CHROMA_KNOWLEDGE_PATH = "/app/worker/data/vectorstore_knowledge"
 CHROMA_MEMORY_PATH = "/app/worker/data/vectorstore_memory"
 vectorstore_knowledge = Chroma(persist_directory=CHROMA_KNOWLEDGE_PATH, embedding_function=EMBEDDINGS)
-rag_retriever = vectorstore_knowledge.as_retriever(search_kwargs={"k": 5})
+rag_retriever = vectorstore_knowledge.as_retriever(
+    search_type="mmr",
+    search_kwargs={'k': 10, 'fetch_k': 50}
+)
 vectorstore_memory = Chroma(persist_directory=CHROMA_MEMORY_PATH, embedding_function=EMBEDDINGS)
 
 @contextmanager

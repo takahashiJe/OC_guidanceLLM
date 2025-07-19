@@ -41,9 +41,15 @@ export const useAuthStore = defineStore('auth', {
         // ログイン成功後、チャットページへリダイレクト
         router.push('/chat');
 
-      } catch (err) {
-        this.errorMessage = err.response?.data?.detail || 'ユーザー名またはパスワードが正しくありません。';
-        throw new Error(this.errorMessage);
+      } catch (error) {
+        // ★★★ ここから修正 ★★★
+        // 実際に発生したエラーオブジェクトをコンソールに出力
+        console.error('ログイン処理で予期せぬエラーが発生しました:', error);
+
+        // ユーザーには、より具体的なエラーメッセージを表示
+        this.errorMessage = 'ログイン中に予期せぬエラーが発生しました。コンソールを確認してください。';
+        // ★★★ ここまで修正 ★★★
+        this.isLoading = false;
       } finally {
         this.isLoading = false;
       }

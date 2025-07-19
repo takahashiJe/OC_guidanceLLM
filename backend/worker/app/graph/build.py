@@ -72,75 +72,70 @@ def build_graph(rag_retriever, llm):
         json_parser = JsonOutputParser(pydantic_object=MultiQuery)
         history_str = "\n".join([f"{msg.type}: {msg.content}" for msg in state["history_messages"]])
 
-        # ★★★ ここから修正 ★★★
-        # 利用可能なドキュメントの概要を、省略せずに詳細に記述
         knowledge_index = """
-        - **イベント概要**:
-        - オープンキャンパス基本情報、参加・予約方法、主なプログラム一覧、体験型模擬授業詳細
-        - 保護者向け説明会、総合型選抜プレゼン講座、交通アクセスと無料送迎バス、無料昼食体験
-        - **大学の概要**:
-        - 理念とビジョン、歴史と学長メッセージ
-        - **大学の特色**:
-        - 少人数教育、学生自主研究制度、最先端の研究環境、地域連携と国際交流
-        - **学部・学科**:
-        - **システム科学技術学部**:
-            - 学部概要
-            - 機械工学科（概要）
-            - 知能メカトロニクス学科（概要）
-            - 情報工学科（概要）
-            - 建築環境システム学科（概要）
-            - **経営システム工学科**:
-            - 学科概要
-            - **研究室**:
-                - サイバーフィジカルシステム研究室（山口研）: 研究室概要、オープンキャンパス出展内容
-                - **出展詳細**:
-                    - 吉田快: サーバーダッシュボード
-                    - 佐藤翔真: ヒューマンタワーバトル
-                    - 高橋潤大: APU-NaviAI
-                    - 小川春翔: StoryClash
-                    - 山根拓真: AIRhythmix
-                    - 成田明音: GraffitiInMotion
-                    - 新井美羽: SummonWeaponsAdventure
-                    - 高橋夢叶: AutomatedWebsiteCreator
-                - 先端ビジネス会計研究室（朴研）: 研究室概要
-                - 応用経済研究室（嶋崎(善)研）: 研究室概要
-                - 環境システム研究室（金澤研）: 研究室概要
-                - 経営数理解析（星野研）: 研究室概要
-        - **生物資源科学部**:
-            - 応用生物科学科、生物生産科学科、生物環境科学科、アグリビジネス学科の概要
-        - **キャンパスライフ**:
-        - 年間行事、クラブ活動、施設紹介、学生寮「清新寮」
-        - **学生支援**:
-        - 奨学金と経済的支援、相談窓口とキャリア支援
-        """
+- **イベント概要**:
+  - オープンキャンパス基本情報、参加・予約方法、主なプログラム一覧、体験型模擬授業詳細
+  - 保護者向け説明会、総合型選抜プレゼン講座、交通アクセスと無料送迎バス、無料昼食体験
+- **大学の概要**:
+  - 理念とビジョン、歴史と学長メッセージ
+- **大学の特色**:
+  - **大学の特色まとめ**
+  - 少人数教育、学生自主研究制度、最先端の研究環境、地域連携と国際交流
+- **学部・学科**:
+  - **学部・学科一覧**
+  - **システム科学技術学部**:
+    - 学部概要
+    - 機械工学科（概要）
+    - 知能メカトロニクス学科（概要）
+    - 情報工学科（概要）
+    - 建築環境システム学科（概要）
+    - **経営システム工学科**:
+      - 学科概要
+      - **研究室**:
+        - **経営システム工学科の研究室一覧**
+        - **サイバーフィジカルシステム研究室（山口研）**: 
+          - 研究室概要、オープンキャンパス出展内容
+          - **オープンキャンパス出展メンバー一覧 (注: ここに記載のメンバーが、現在オープンキャンパスに参加しているメンバーの全てです)**:
+            - 吉田快, 佐藤翔真, 高橋潤大, 小川春翔, 山根拓真, 成田明音, 新井美羽, 高橋夢叶
+        - 先端ビジネス会計研究室（朴研）: 研究室概要
+        - 応用経済研究室（嶋崎(善)研）: 研究室概要
+        - 環境システム研究室（金澤研）: 研究室概要
+        - 経営数理解析（星野研）: 研究室概要
+  - **生物資源科学部**:
+    - 応用生物科学科、生物生産科学科、生物環境科学科、アグリビジネス学科の概要
+- **キャンパスライフ**:
+  - **キャンパスライフ概要**
+  - 年間行事、クラブ活動、施設紹介、学生寮「清新寮」
+- **学生支援**:
+  - **学生支援概要**
+  - 奨学金と経済的支援、相談窓口とキャリア支援
+"""
 
         prompt = f"""あなたは、ユーザーの質問を分析し、ベクトル検索のヒット率を最大化するために、多様な検索クエリを生成する専門家です。
-        与えられた【利用可能なドキュメントの概要】を**最優先の参考情報**として、ユーザーの質問に答えられる情報がどのドキュメントにありそうか見当をつけ、最適な検索クエリを3〜5個生成してください。
+与えられた【利用可能なドキュメントの概要】と【同義語と解釈のルール】を**最優先の参考情報**として、ユーザーの質問に答えられる情報がどのドキュメントにありそうか見当をつけ、最適な検索クエリを3〜5個生成してください。
 
-        **クエリ生成の戦略:**
-        1.  **書き換えクエリ**: ユーザーの質問を、概要にある言葉を使ってより具体的に書き換える。
-        2.  **仮想文書クエリ**: 質問の答えがありそうな文書のタイトルや要約を、概要を参考にしつつ生成する。
-        3.  **キーワードクエリ**: 概要に含まれる固有名詞や専門用語を抜き出す。
+**クエリ生成の戦略:**
+1.  **書き換えクエリ**: ユーザーの質問を、概要やルールにある言葉を使ってより具体的に書き換える。「山口研のメンバーは？」と聞かれたら、「山口研のオープンキャンパス出展メンバー一覧」のように、概要にある言葉に近づけること。
+2.  **仮想文書クエリ**: 質問の答えがありそうな文書のタイトルや要約を、概要を参考にしつつ生成する。
+3.  **キーワードクエリ**: 概要に含まれる固有名詞や専門用語を抜き出す。
 
-        **【最重要ルール】**
-        - **必ず【利用可能なドキュメントの概要】に記載のある情報に基づいてクエリを生成してください。**
-        - **概要にないトピック（例：入試の過去問、サークルの詳細な活動内容など）に関する質問が来た場合は、その旨を示すクエリを生成してください。**
+{json_parser.get_format_instructions()}
 
-        {json_parser.get_format_instructions()}
+---
+【利用可能なドキュメントの概要】
+{knowledge_index}
+---
+【同義語と解釈のルール】
+- 「メンバー」「メンバー一覧」に関する質問は、「オープンキャンパス出展メンバー一覧」に関する質問として解釈してください。現在利用可能なメンバー情報は、オープンキャンパスの出展者に限定されています。
+- 「山口研」は「サイバーフィジカルシステム研究室」の通称です。
+---
 
-        ---
-        【利用可能なドキュメントの概要】
-        {knowledge_index}
-        ---
+【会話履歴】
+{history_str if history_str else "なし"}
 
-        【会話履歴】
-        {history_str if history_str else "なし"}
-
-        【最後の質問】
-        {state['user_input']}
-        """
-        # ★★★ ここまで修正 ★★★
-
+【最後の質問】
+{state['user_input']}
+"""
         chain = llm | json_parser
         response_json = chain.invoke([("human", prompt)])
         
@@ -176,9 +171,35 @@ def build_graph(rag_retriever, llm):
         print(f"  - 重複排除後、合計 {len(final_docs)} 件のユニークなドキュメントを取得しました。")
         return {"knowledge_docs": knowledge_docs, "_retrieved_docs_metadata": metadata_list}
 
+    def conditional_augmentation_node(state: AgentState):
+        """【ノード5-A】条件付き情報拡充: リアルタイムのスケジュール情報を取得"""
+        print(f"---GRAPH[5-A]: 条件付き情報拡充 (状況: {state['event_context']})---")
+
+        if state.get("event_context") != "DURING_EVENT":
+            return {"realtime_schedule_info": None}
+
+        user_input = state["user_input"]
+        
+        if "山口研" in user_input or "サイバーフィジカル" in user_input:
+            topic = "山口研"
+        elif "経営システム工学科" in user_input:
+            topic = "経営システム工学科"
+        else:
+            knowledge_docs_text = " ".join(state.get("knowledge_docs", []))
+            if "山口研" in knowledge_docs_text or "サイバーフィジカル" in knowledge_docs_text:
+                topic = "山口研"
+            elif "経営システム工学科" in knowledge_docs_text:
+                topic = "経営システム工学科"
+            else:
+                topic = "全体"
+
+        realtime_info = tools.get_current_schedule_info(topic)
+        
+        return {"realtime_schedule_info": realtime_info}
+
     def generate_rag_response_node(state: AgentState):
-        """【ノード5-A】応答生成"""
-        print("---GRAPH[5-A]: RAG応答を生成中---")
+        """【ノード6-A】応答生成"""
+        print("---GRAPH[6-A]: RAG応答を生成中---")
         reference_info_parts = []
         if state.get("knowledge_docs"):
             doc_strings = []
@@ -187,28 +208,53 @@ def build_graph(rag_retriever, llm):
                 doc_strings.append(f"[{i+1}] ソース: {os.path.basename(source)}\n内容: {doc}")
             reference_info_parts.append("【参考情報】:\n" + "\n\n".join(doc_strings))
         
+        if state.get("realtime_schedule_info"):
+            reference_info_parts.append(f"【リアルタイム情報】:\n{state['realtime_schedule_info']}")
+
         reference_info = "\n\n".join(reference_info_parts)
+        
+        # ★★★ ここから修正 ★★★
         system_prompt = (
-            "あなたは秋田県立大学オープンキャンパスの、親切で優秀なAIアシスタントです。\n"
-            "提供された会話履歴と以下の【参考情報】を元に、ユーザーの質問に日本語で自然に回答してください。\n"
-            "**回答には、どの【参考情報】のどの部分を根拠にしたか、番号で `[1]` のように示してください。**\n"
-            "もし参考情報の中に回答の根拠となる情報が見つからない場合は、無理に回答を生成せず、「申し訳ありませんが、その質問に関する情報は現在持ち合わせておりません。」と正直に回答してください。\n\n"
-            f"{reference_info}"
+            "あなたは「APU-NaviAI」、秋田県立大学本荘キャンパスのオープンキャンパスを案内するAIナビゲーターです。\n"
+            "来場者であるユーザーを、親切で少し親しみやすい口調で案内してください。\n"
+            "提供された会話履歴と以下の【参考情報】および【リアルタイム情報】を元に、ユーザーの質問に日本語で自然に回答してください。\n\n"
+            "**【回答のルール】**\n"
+            "1. **まず【リアルタイム情報】を最優先で確認し、「現在開催中」や「まもなく開始」のイベントがあれば、それを中心に回答を組み立ててください。**\n"
+            "2. **次に【参考情報】を参照し、各出展の詳細な内容（テーマ、担当者など）で回答を補強してください。**\n"
+            "3. **回答には、どの【参考情報】のどの部分を根拠にしたか、番号で `[1]` のように示してください。リアルタイム情報に根拠は不要です。**\n"
+            "4. **「メンバー」に関する質問が来た場合、参考情報にある「オープンキャンパス出展メンバー」や「担当者」のリストを元に回答してください。これはオープンキャンパスの文脈におけるメンバーリストとして扱います。**\n"
+            "5. **もし参考情報の中に回答の根拠となる情報が見つからない場合は、無理に回答を生成せず、「申し訳ありませんが、その質問に関する情報は現在持ち合わせておりません。」と正直に回答してください。**\n\n"
+            f"【参考情報】:\n{reference_info}"
         )
+        # ★★★ ここまで修正 ★★★
+
         messages = state["history_messages"] + [("human", state["user_input"])]
         prompt_messages = [("system", system_prompt)] + messages
         response = llm.invoke(prompt_messages)
         return {"final_response": response.content}
 
     def handle_chitchat_node(state: AgentState):
-        """【ノード3-B】雑談応答"""
-        print("---GRAPH[3-B]: 雑談応答を生成中---")
-        intent = state.get("intent")
-        if intent == "greeting":
-            response = "こんにちは！秋田県立大学オープンキャンパスAIアシスタントです。何かお手伝いできることはありますか？"
-        else:
-            response = "はい、ありがとうございます。他にご質問はありますか？"
-        return {"final_response": response}
+        """【ノード3-B】雑談応答 (LLM生成版)"""
+        print("---GRAPH[3-B]: LLMで雑談応答を生成中---")
+
+        # ★★★ ここから修正 ★★★
+        # APU-NaviAIとしてのペルソナを定義する雑談専用のシステムプロンプト
+        system_prompt = (
+            "あなたは「APU-NaviAI」、秋田県立大学本荘キャンパスのオープンキャンパスを案内するAIナビゲーターです。\n"
+            "あなたの役割は、来場者であるユーザーを歓迎し、親切で少し親しみやすい口調で自然な会話をすることです。\n"
+            "最初の挨拶では、必ず自己紹介と「オープンキャンパスへようこそ！」といった歓迎の言葉を述べてください。\n"
+            "オープンキャンパスに関する専門的な知識は持っていないという設定で、一般的な知識や感情表現を交えながら、楽しい雑談で応答してください。"
+        )
+        # ★★★ ここまで修正 ★★★
+
+        # LLMに渡すメッセージを組み立てる
+        messages = state["history_messages"] + [("human", state["user_input"])]
+        prompt_messages = [("system", system_prompt)] + messages
+
+        # LLMを呼び出して応答を生成
+        response = llm.invoke(prompt_messages)
+        
+        return {"final_response": response.content}
 
     def final_touch_node(state: AgentState):
         """【最終ノード】最終調整"""
@@ -235,6 +281,7 @@ def build_graph(rag_retriever, llm):
     graph.add_node("classify_intent", classify_intent_node)
     graph.add_node("query_expansion", query_expansion_node)
     graph.add_node("retrieve_knowledge", retrieve_knowledge_node)
+    graph.add_node("conditional_augmentation", conditional_augmentation_node)
     graph.add_node("generate_rag_response", generate_rag_response_node)
     graph.add_node("handle_chitchat", handle_chitchat_node)
     graph.add_node("final_touch", final_touch_node)
@@ -252,7 +299,8 @@ def build_graph(rag_retriever, llm):
     )
 
     graph.add_edge("query_expansion", "retrieve_knowledge")
-    graph.add_edge("retrieve_knowledge", "generate_rag_response")
+    graph.add_edge("retrieve_knowledge", "conditional_augmentation")
+    graph.add_edge("conditional_augmentation", "generate_rag_response")
     graph.add_edge("generate_rag_response", "final_touch")
     graph.add_edge("handle_chitchat", "final_touch")
     graph.add_edge("final_touch", END)

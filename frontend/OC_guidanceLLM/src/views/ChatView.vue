@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full flex flex-col bg-white">
+  <div class="w-full h-full flex flex-col bg-noise">
 
     <div class="flex-1 overflow-y-auto">
       <ChatMessages :messages="chatStore.messages" />

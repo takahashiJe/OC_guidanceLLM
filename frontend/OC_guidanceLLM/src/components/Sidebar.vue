@@ -1,5 +1,5 @@
 <template>
-  <aside class="bg-[#f0f4f9] w-full h-full p-4 flex flex-col">
+  <aside class="bg-white w-full h-full p-4 flex flex-col border-r border-gray-200">
     <div class="flex items-center space-x-3 shrink-0 mb-6">
       <button
         @click="$emit('close')"
@@ -16,7 +16,7 @@
     <div class="flex-1 flex flex-col space-y-4">
       <button
         @click="showConfirmation"
-        class="flex items-center justify-between w-full bg-blue-100 hover:bg-blue-200 text-blue-800 font-semibold py-2 px-4 rounded-full transition-colors duration-200"
+        class="flex items-center justify-between w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-full transition-colors duration-200"
       >
         <span>チャットを新規作成</span>
         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -29,7 +29,7 @@
     <div class="shrink-0">
       <button
         @click="handleLogout"
-        class="flex items-center space-x-3 w-full text-left text-gray-600 hover:bg-gray-200 py-2 px-4 rounded-lg transition-colors duration-200"
+        class="flex items-center space-x-3 w-full text-left text-gray-600 hover:bg-gray-100 py-2 px-4 rounded-lg transition-colors duration-200"
       >
         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -49,7 +49,7 @@
           現在の会話の履歴は全て消えます。本当に新規作成しますか？
         </p>
         <div class="flex justify-center space-x-4">
-          <button @click="confirmNewChat" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200">
+          <button @click="confirmNewChat" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200">
             はい、作成します
           </button>
           <button @click="cancelNewChat" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200">

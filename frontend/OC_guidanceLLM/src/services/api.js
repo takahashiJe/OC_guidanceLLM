@@ -5,7 +5,8 @@ import { useAuthStore } from '../stores/auth';
 // 1. APIクライアントの作成と基本設定
 const apiClient = axios.create({
   // 環境変数からAPIのベースURLを読み込むか、デフォルト値を設定
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  // baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://ibera.cps.akita-pu.ac.jp/api',
   headers: {
     'Content-Type': 'application/json',
   },
