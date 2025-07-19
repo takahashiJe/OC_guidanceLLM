@@ -13,8 +13,11 @@
           </svg>
         </button>
         <h1 class="text-lg font-semibold text-gray-700">APU-NaviAI</h1>
-        <img src="/app-icon.png" alt="App Icon" class="w-8 h-8 rounded-full">
-      </header>
+
+        <button @click="isAboutModalOpen = true" class="p-1 rounded-full hover:bg-gray-100 transition-colors" title="このアプリについて">
+          <img src="/app-icon.png" alt="App Icon" class="w-8 h-8 rounded-full">
+        </button>
+        </header>
 
       <main class="flex-1" :class="{ 'overflow-y-auto': !isAuthRoute }">
         <RouterView />
@@ -22,18 +25,37 @@
     </div>
 
     <transition name="fade">
-      <div 
-        v-if="isSidebarOpen" 
-        @click="isSidebarOpen = false" 
-        class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
-      ></div>
+      <div v-if="isSidebarOpen" @click="isSidebarOpen = false" class="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"></div>
     </transition>
     <transition name="slide-left">
       <div v-if="isSidebarOpen" class="fixed top-0 left-0 w-3/4 max-w-sm h-full bg-white shadow-xl z-50 lg:hidden">
         <Sidebar @close="isSidebarOpen = false" />
       </div>
     </transition>
-  </div>
+
+    <transition name="modal-fade">
+      <div v-if="isAboutModalOpen" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div @click="isAboutModalOpen = false" class="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
+        
+        <div class="relative bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md text-center">
+          <h3 class="text-xl font-bold text-gray-800 mb-2">APU-NaviAIについて</h3>
+          <p class="text-gray-600 mb-6 leading-relaxed">
+            このAPU-NaviAIは，経営システム工学科<br>サイバーフィジカルシステム研究室（山口研）によって制作されました．
+          </p>
+          
+          <a href="https://www.cps.akita-pu.ac.jp/" target="_blank" rel="noopener noreferrer"
+             class="inline-block w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+            研究室のサイトを見る
+          </a>
+          
+          <button @click="isAboutModalOpen = false" 
+                  class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2.5 px-6 rounded-lg transition-colors duration-200">
+            閉じる
+          </button>
+        </div>
+      </div>
+    </transition>
+    </div>
 </template>
 
 <script setup>
@@ -44,6 +66,11 @@ import Sidebar from './components/Sidebar.vue';
 const isSidebarOpen = ref(false);
 const route = useRoute();
 
+// ★★★ ここからが追加箇所 ★★★
+// モーダルの表示状態を管理
+const isAboutModalOpen = ref(false);
+// ★★★ ここまでが追加箇所 ★★★
+
 const isAuthRoute = computed(() => {
   return route.name === 'Login' || route.name === 'Register';
 });
@@ -51,21 +78,28 @@ const isAuthRoute = computed(() => {
 
 <style scoped>
 /* スタイルに変更はありません */
-.fade-enter-active,
-.fade-leave-active {
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.slide-left-enter-active, .slide-left-leave-active { transition: transform 0.3s ease-in-out; }
+.slide-left-enter-from, .slide-left-leave-to { transform: translateX(-100%); }
+
+/* ★★★ ここからが追加箇所 ★★★ */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
   transition: opacity 0.3s ease;
 }
-.fade-enter-from,
-.fade-leave-to {
+.modal-fade-enter-active .relative,
+.modal-fade-leave-active .relative {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.modal-fade-enter-from,
+.modal-fade-leave-to {
   opacity: 0;
 }
-
-.slide-left-enter-active,
-.slide-left-leave-active {
-  transition: transform 0.3s ease-in-out;
+.modal-fade-enter-from .relative,
+.modal-fade-leave-to .relative {
+  transform: scale(0.95);
+  opacity: 0;
 }
-.slide-left-enter-from,
-.slide-left-leave-to {
-  transform: translateX(-100%);
-}
+/* ★★★ ここまでが追加箇所 ★★★ */
 </style>
