@@ -19,3 +19,13 @@ services:
     build:
       target: production
     restart: always
+
+  db:
+    ports:
+      - "3306:3306"
+    restart: always
+  
+  redis:
+    ports:
+      - "6379:6379"
+    restart: always
