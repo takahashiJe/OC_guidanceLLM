@@ -41,10 +41,6 @@ services:
       - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
       - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_started
       ollama:
         condition: service_started
     deploy:
@@ -112,10 +108,6 @@ services:
       - ./frontend/OC_guidanceLLM:/app
       # node_modulesはホストと共有しない(パフォーマンスと環境差異のため)
       - /app/node_modules
-    depends_on:
-      # API Gatewayが起動してからフロントエンドを起動する
-      api_gateway: # ★★★ サービス名のみでOK ★★★
-        condition: service_started # API Gatewayが起動するまで待つ
 
 volumes:
   db_data:
