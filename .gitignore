@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.venv
+.env*
+*.DS_Store
+
+neo4j_data/
+neo4j_plugins/neo4j_data/

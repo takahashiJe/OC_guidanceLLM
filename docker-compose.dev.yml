@@ -1,0 +1,128 @@
+# docker-compose.yml (開発用)
+
+services:
+  db-init:
+    build:
+      context: .
+      dockerfile: ./backend/api_gateway/Dockerfile.dev
+    env_file: .env
+    volumes:
+      - ./backend:/app/backend
+      - ./script:/app/script
+    command: ["python", "/app/script/init_db.py"]
+    depends_on:
+      db:
+        condition: service_healthy
+  # --- API Gateway ---
+  api_gateway:
+    build:
+      context: .
+      dockerfile: ./backend/api_gateway/Dockerfile.dev
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      # 開発中はソースコードの変更を即時反映させる
+      - ./backend/api_gateway:/app/api_gateway
+      - ./backend/shared:/app/shared
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # --- Worker ---
+  worker:
+    build:
+      context: .
+      dockerfile: ./backend/worker/Dockerfile.dev
+    env_file: .env
+    volumes:
+      # 開発中はソースコードの変更を即時反映させる
+      - ./backend/worker:/app/worker
+      - ./backend/shared:/app/shared
+      - ./backend/worker/data/vectorstore_knowledge:/app/worker/data/vectorstore_knowledge
+      - ./backend/worker/data/vectorstore_memory:/app/worker/data/vectorstore_memory
+      - ./script:/app/script
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      ollama:
+        condition: service_started
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # --- Ollama ---
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  # --- Redis ---
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Database ---
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 15s      # 確認の間隔を15秒に
+      timeout: 10s       # タイムアウトを10秒に
+      retries: 10        # リトライ回数を10回に
+      start_period: 60s  # 起動後、最初の60秒はチェックを待つ
+  
+# --- Frontend (開発用) ---
+  frontend:
+    # frontendプロジェクトのルートディレクトリをビルドコンテキストとして指定
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile # frontend/OC_guidanceLLM/Dockerfile を参照
+    ports:
+      # ホストの5173番ポートをコンテナの5173番に接続 (Viteのデフォルト)
+      - "5173:5173" 
+    volumes:
+      # ソースコードの変更を即時反映させる
+      - ./frontend/OC_guidanceLLM:/app # ★★★ ここを修正 ★★★
+      # node_modulesはホストと共有しない(パフォーマンスと環境差異のため)
+      - /app/node_modules
+    depends_on:
+      # API Gatewayが起動してからフロントエンドを起動する
+      api_gateway: # ★★★ サービス名のみでOK ★★★
+        condition: service_started # API Gatewayが起動するまで待つ
+
+volumes:
+  db_data:
+  ollama_data:

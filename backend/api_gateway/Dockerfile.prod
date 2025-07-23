@@ -1,0 +1,27 @@
+# api_gateway 本番用Dockerfile (最終修正版)
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /app
+
+# 依存関係を先にインストールして、Dockerのレイヤーキャッシュを有効活用
+COPY ./backend/api_gateway/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# --- ★★★ 最も重要な修正点 ★★★ ---
+# backendディレクトリの「中身」を/appに直接コピーする。
+# これにより /app/api_gateway, /app/shared, /app/worker, /app/entrypoint.sh が作成される。
+COPY ./backend/ /app/
+
+# DB初期化スクリプトをコピー
+COPY ./script/ /app/script/
+
+# 実行権限を付与
+RUN chmod +x /app/entrypoint.sh
+
+# コンテナ起動時に必ずentrypoint.shを実行する
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+# デフォルトコマンド。uvicornは/appからapi_gatewayモジュールを見つけられる
+CMD ["uvicorn", "api_gateway.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

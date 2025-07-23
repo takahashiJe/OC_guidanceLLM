@@ -1,0 +1,21 @@
+# docker-compose.prod.yml (本番用)
+
+services:
+  db-init:
+    build:
+      target: production
+  # --- API Gateway ---
+  api_gateway:
+    env_file: .env.gateway
+    build:
+      target: production
+    ports:
+      - "8000:8000"
+    restart: always
+
+  # --- Worker ---
+  worker:
+    env_file: .env.worker
+    build:
+      target: production
+    restart: always

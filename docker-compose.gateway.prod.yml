@@ -1,0 +1,57 @@
+# docker-compose.gateway.prod.yml
+# For gateway (ibera: 172.28.208.209)
+# (Frontend is served by an external web server)
+
+services:
+  # --- API Gateway ---
+  api_gateway:
+    build:
+      context: .
+      dockerfile: ./backend/api_gateway/Dockerfile.prod
+    env_file:
+      - .env.gateway
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
+
+  # --- Redis ---
+  redis:
+    image: redis:7.2-alpine
+    # 外部のWorkerサーバーから接続できるようにポートを開放
+    ports:
+      - "6379:6379"
+    # すべてのネットワークインターフェースからの接続を許可
+    command: redis-server --bind 0.0.0.0
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
+  # --- Database (MySQL) ---
+  db:
+    image: mysql:8.0
+    # 外部のWorkerサーバーから接続できるようにポートを開放
+    ports:
+      - "3306:3306"
+    # すべてのネットワークインターフェースからの接続を許可
+    command: --bind-address=0.0.0.0
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: always
+
+# 名前付きボリュームの定義
+volumes:
+  db_data:

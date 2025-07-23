@@ -1,0 +1,42 @@
+[
+  {
+    "lab_name": "サイバーフィジカルシステム研究室",
+    "theme": "社会を効率良く駆動させるサイバーフィジカルシステムを秋田から世界へ",
+    "professor_name": "山口高康",
+    "location": "D404",
+    "start_time": "9:30",
+    "end_time": "15:30"
+  },
+  {
+    "lab_name": "先端ビジネス会計研究室",
+    "theme": "なぜ赤字製品が儲かるのか？",
+    "professor_name": "朴元熙",
+    "location": "GⅡ609",
+    "start_time": "10:30",
+    "end_time": "15:30"
+  },
+  {
+    "lab_name": "応用経済研究室",
+    "theme": "経済学の求めるもの：簡単で自分にぴったりな結果が得られる工夫について",
+    "professor_name": "嶋崎善章",
+    "location": "",
+    "start_time": "10:30",
+    "end_time": "15:30"
+  },
+  {
+    "lab_name": "環境システム研究室",
+    "theme": "機能水の製造装置検討と水の分析手法",
+    "professor_name": "金澤伸浩",
+    "location": "GII612",
+    "start_time": "10:30",
+    "end_time": "15:30"
+  },
+  {
+    "lab_name": "経営数理解析",
+    "theme": "大学の数学：ネットワーク最適化を体験しよう！",
+    "professor_name": "星野，荒谷（予定）",
+    "location": "GII513",
+    "start_time": "10:30",
+    "end_time": "15:30"
+  }
+]

@@ -1,0 +1,22 @@
+# backend/worker/Dockerfile.prod (修正版)
+
+FROM python:3.11-slim
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# PYTHONPATHを設定することで、/app を起点にモジュールを検索する
+ENV PYTHONPATH /app
+
+WORKDIR /app
+
+# worker用のrequirements.txtをコピーして依存関係をインストール
+COPY ./backend/worker/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# 必要なソースコードをすべてコピー
+COPY ./backend /app/backend
+
+# Celeryワーカーを起動
+# PYTHONPATHが/appに設定されているため、backend.shared.celery_appとして認識される
+# (celery_app.py内のCeleryインスタンス名が'celery_app'であることを想定)
+CMD ["celery", "-A", "backend.shared.celery_app.celery_app", "worker", "--loglevel=info"]

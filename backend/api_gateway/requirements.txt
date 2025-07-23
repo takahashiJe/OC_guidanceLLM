@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+psycopg2-binary
+python-jose[cryptography]
+celery
+redis
+python-multipart
+pymysql
+
+passlib==1.7.4
+bcrypt==4.0.1
+tenacity

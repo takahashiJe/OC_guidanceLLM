@@ -1,0 +1,36 @@
+# LangChain core & components & langgraph
+langchain==0.2.5
+langchain-community==0.2.5
+langchain-core==0.2.20  # ★★★ このバージョンは、>=0.2.7, >=0.2.0, そして >=0.2.20 の全ての要求を満たします ★★★
+langchain-ollama==0.1.0
+langchain-experimental==0.0.61
+langchain-text-splitters==0.2.1
+langgraph==0.0.69
+
+# ベクトルDB
+chromadb>=0.5.3
+neo4j
+py2neo
+spacy
+
+# celeryとredisクライアント
+pika
+celery
+redis
+
+sqlalchemy
+psycopg2-binary
+scikit-learn
+numpy
+pymysql
+markdown-it-py
+markdown
+
+# ベクトルストア初期化時に必要
+jq
+unstructured
+
+# SpaCy Japanese tokenizer dependencies for ja_core_news_sm
+sudachipy
+sudachidict_core
+GPUtil
